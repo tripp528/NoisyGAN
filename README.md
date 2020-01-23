@@ -47,3 +47,14 @@ gaa, gcmsg "", ggp
 ```
 git checkout --track origin/branchYouWant
 ```
+
+
+## Setting up DeepGreen
+
+### zsh/ohmyzsh
+
+1. [zsh without root access](https://stackoverflow.com/questions/15293406/install-zsh-without-root-access)
+
+2. Put ```exec ~/bin/zsh -l``` in a .sh file and run it on login.
+
+3. [Oh my zsh](https://github.com/ohmyzsh/ohmyzsh)
