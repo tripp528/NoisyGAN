@@ -58,3 +58,52 @@ git checkout --track origin/branchYouWant
 2. Put ```exec ~/bin/zsh -l``` in a .sh file and run it on login.
 
 3. [Oh my zsh](https://github.com/ohmyzsh/ohmyzsh)
+
+4. neovim
+
+```
+curl -LO https://github.com/neovim/neovim/releases/download/stable/nvim.appimage
+chmod u+x nvim.appimage
+./nvim.appimage
+
+# then add alias for ./nvim.appimage to .zshrc
+```
+
+## Use DeepGreen
+
+Submit
+```
+sbatch submit.sh
+```
+
+check on it
+```
+squeue -u {username}
+```
+
+Cancel it
+
+```
+scancel <job_id>
+```
+
+Watch the output as it runs
+```
+# go to output folder that you set in submit.sh
+
+tail -f <output_file_name>
+```
+
+Use srun to just normally run shit
+
+```
+srun -N 1 -p dggpu --gres=gpu:2 --accel-bind=g --ntasks=4 --pty bash
+
+
+```
+
+Check gpus (tensorflow v1; for v2 it's a different command)
+```
+import tensorflow as tf
+sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+```
