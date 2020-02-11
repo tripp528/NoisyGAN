@@ -1,8 +1,17 @@
-import librosa, librosa.display
 import matplotlib.pyplot as plt
+plt.style.use("dark_background")
 import numpy as np
-import tensorflow as tf
+import warnings
+warnings.filterwarnings("ignore")
+
+import librosa, librosa.display #display explicitly, bug https://github.com/librosa/librosa/issues/343
+import IPython.display as ipd # for playing audio in jupyter notebook
+
+import tensorflow.compat.v1 as tf
+print("tf version: ",tf.__version__)
+# tf.compat.v1.enable_v2_behavior()
 DEFAULT_SAMPLE_RATE = 16000
+sample_rate = DEFAULT_SAMPLE_RATE
 
 
 def plotControls(amplitudes, harmonic_distribution, f0_hz):
@@ -12,7 +21,7 @@ def plotControls(amplitudes, harmonic_distribution, f0_hz):
 
     plt.figure(figsize=(18, 4))
     plt.subplot(131)
-    plt.plot(time, amps[0, :, 0])
+    plt.plot(time, amplitudes[0, :, 0])
     plt.xticks([0, 1, 2, 3, 4])
     plt.title('Amplitude')
 
@@ -42,4 +51,5 @@ def wavePlot(audio):
     plt.show()
 
 def play(audio, sr=DEFAULT_SAMPLE_RATE):
+    '''takes a tensor as input (from ddsp)'''
     return ipd.Audio(audio, rate=sample_rate)
