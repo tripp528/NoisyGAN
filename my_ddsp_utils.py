@@ -7,7 +7,6 @@ import warnings
 warnings.filterwarnings("ignore")
 
 import librosa, librosa.display #display explicitly, bug https://github.com/librosa/librosa/issues/343
-# import IPython.display as ipd # for playing audio in jupyter notebook
 
 DEFAULT_SAMPLE_RATE = 16000
 sample_rate = DEFAULT_SAMPLE_RATE
@@ -51,6 +50,7 @@ def wavePlot(audio):
 
 def play(audio, sr=DEFAULT_SAMPLE_RATE):
     '''takes a tensor as input (from ddsp)'''
+    import IPython.display as ipd
     return ipd.Audio(audio, rate=sr)
 
 def find_model_dir(dir_name):
