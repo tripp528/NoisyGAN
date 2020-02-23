@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 plt.style.use("dark_background")
 import numpy as np
@@ -7,9 +9,6 @@ warnings.filterwarnings("ignore")
 import librosa, librosa.display #display explicitly, bug https://github.com/librosa/librosa/issues/343
 import IPython.display as ipd # for playing audio in jupyter notebook
 
-import tensorflow.compat.v1 as tf
-print("tf version: ",tf.__version__)
-# tf.compat.v1.enable_v2_behavior()
 DEFAULT_SAMPLE_RATE = 16000
 sample_rate = DEFAULT_SAMPLE_RATE
 
@@ -53,3 +52,13 @@ def wavePlot(audio):
 def play(audio, sr=DEFAULT_SAMPLE_RATE):
     '''takes a tensor as input (from ddsp)'''
     return ipd.Audio(audio, rate=sample_rate)
+
+def find_model_dir(dir_name):
+    # Iterate through directories until model directory is found
+    for root, dirs, filenames in os.walk(dir_name):
+        for filename in filenames:
+            if filename.endswith(".gin") and not filename.startswith("."):
+                model_dir = root
+                print("found", model_dir)
+                break
+        return model_dir
