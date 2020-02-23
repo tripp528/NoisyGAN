@@ -82,74 +82,11 @@ class DDSP_AUTOENCODER:
         return sample["audio"], audio_gen
 
     def train(self, iterations=10):
-        train_helper(self.ddsp_dataset.data_provider,
+        logging.set_verbosity(logging.INFO)
+        ddsp.training.train_util.train(self.ddsp_dataset.data_provider,
               self.trainer,
               batch_size=2,
               num_steps=iterations,
               steps_per_summary=5,
               steps_per_save=5,
               model_dir=self.model_dir)
-
-def train_helper(data_provider,
-                  trainer,
-                  batch_size=32,
-                  num_steps=1000000,
-                  steps_per_summary=300,
-                  steps_per_save=300,
-                  model_dir='~/tmp/ddsp'):
-
-
-  import tensorflow.compat.v2 as tfcv2
-
-  """Main training loop."""
-  # Get a distributed dataset.
-  dataset = data_provider.get_batch(batch_size, shuffle=True, repeats=-1)
-  dataset = trainer.distribute_dataset(dataset)
-  dataset_iter = iter(dataset)
-
-  # Build model, easiest to just run forward pass.
-  trainer.build(next(dataset_iter))
-
-  # Load latest checkpoint if one exists in model_dir.
-  trainer.restore(model_dir)
-
-  # Create training loss metrics.
-  avg_losses = {name: tfcv2.keras.metrics.Mean(name=name, dtype=tf.float32)
-                for name in trainer.model.loss_names}
-
-  # Set up the summary writer and metrics.
-  summary_dir = os.path.join(model_dir, 'summaries', 'train')
-  summary_writer = tfcv2.summary.create_file_writer(summary_dir)
-
-  # Save the gin config.
-  ddsp.training.train_util.write_gin_config(summary_writer, model_dir, trainer.step.numpy())
-
-  # Train.
-  with summary_writer.as_default():
-    for _ in range(num_steps):
-      step = trainer.step
-
-      # Take a step.
-      losses = trainer.train_step(dataset_iter)
-
-      # Update metrics.
-      for k, v in losses.items():
-        avg_losses[k].update_state(v)
-
-      # Log the step.
-      logging.info('Step:%d Loss:%.2f', step, losses['total_loss'])
-      print('Step:%d Loss:%.2f' % (step, losses['total_loss']))
-
-      # Write Summaries.
-      if step % steps_per_summary == 0:
-        for k, metric in avg_losses.items():
-          tfcv2.summary.scalar('losses/{}'.format(k), metric.result(), step=step)
-          metric.reset_states()
-
-      # Save Model.
-      if step % steps_per_save == 0:
-        trainer.save(model_dir)
-        summary_writer.flush()
-
-  logging.info('Training Finished!')
-  print('Training Finished!')
