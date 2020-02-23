@@ -1,3 +1,5 @@
+import os
+
 import matplotlib.pyplot as plt
 plt.style.use("dark_background")
 import numpy as np
@@ -50,3 +52,13 @@ def wavePlot(audio):
 def play(audio, sr=DEFAULT_SAMPLE_RATE):
     '''takes a tensor as input (from ddsp)'''
     return ipd.Audio(audio, rate=sample_rate)
+
+def find_model_dir(dir_name):
+    # Iterate through directories until model directory is found
+    for root, dirs, filenames in os.walk(dir_name):
+        for filename in filenames:
+            if filename.endswith(".gin") and not filename.startswith("."):
+                model_dir = root
+                print("found", model_dir)
+                break
+        return model_dir
