@@ -23,7 +23,7 @@ class DDSP_DATASET:
 
         # build the TFRecords
         if buildRecords:
-            self.buildTFRecords(input_audio_filepattern, output_tfrecord_path)
+            self.buildTFRecords()
 
         # get the data provider
         self.data_provider = ddsp.training.data.TFRecordProvider(self.train_file_pattern)
