@@ -1,5 +1,6 @@
 import pickle
 
+from absl import logging
 import tensorflow as tf
 
 from ddsp_autoencoder import *
@@ -17,5 +18,6 @@ output_tfrecord_path = './Data/piano/piano30s.tfrecord'
 dataset = DDSP_DATASET(input_audio_filepattern, output_tfrecord_path,buildRecords=opt.build_records)
 
 #build model
+logging.set_verbosity(logging.INFO)
 autoencoder = DDSP_AUTOENCODER(dataset,model_dir=opt.model_dir)
 autoencoder.train(iterations=opt.iters)

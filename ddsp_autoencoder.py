@@ -1,6 +1,5 @@
 from ddsp_dataset import *
 import gin
-from absl import logging
 
 class DDSP_AUTOENCODER:
     def __init__(self, ddsp_dataset, model_dir, restore=False):
@@ -82,7 +81,6 @@ class DDSP_AUTOENCODER:
         return sample["audio"], audio_gen
 
     def train(self, iterations=10):
-        logging.set_verbosity(logging.INFO)
         ddsp.training.train_util.train(self.ddsp_dataset.data_provider,
               self.trainer,
               batch_size=2,
