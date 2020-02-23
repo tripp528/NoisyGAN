@@ -2,12 +2,23 @@ from ddsp_dataset import *
 import gin
 
 class DDSP_AUTOENCODER:
-    def __init__(self, ddsp_dataset, model_dir):
+    def __init__(self, ddsp_dataset, model_dir, restore=False):
         self.ddsp_dataset = ddsp_dataset
         self.model_dir = model_dir
         # get distribution strategy (change if using gpus/tpus)
         self.strategy = ddsp.training.train_util.get_strategy()
         self.buildModel()
+
+        # restore from checkpoint
+        if restore == True:
+            self.model_dir = find_model_dir(self.model_dir)
+            ckpt = ddsp.training.train_util.get_latest_chekpoint(self.model_dir)
+            print("restoring...",ckpt)
+            self.model.restore(ckpt)
+
+        # get trainer
+        with self.strategy.scope():
+            self.trainer = ddsp.training.train_util.Trainer(self.model, self.strategy, learning_rate=1e-3)
 
         # Build model, easiest to just run forward pass.
         dataset = self.trainer.distribute_dataset(self.ddsp_dataset.getDataset())
@@ -58,18 +69,9 @@ class DDSP_AUTOENCODER:
                                              decoder=decoder,
                                              processor_group=processor_group,
                                              losses=[spectral_loss])
-            self.trainer = ddsp.training.train_util.Trainer(self.model, self.strategy, learning_rate=1e-3)
+            # self.trainer = ddsp.training.train_util.Trainer(self.model, self.strategy, learning_rate=1e-3)
 
-    def train(self,iterations=10):
-        dataset_iter = iter(self.ddsp_dataset.getDataset())
-        for i in range(iterations):
-            losses = self.trainer.train_step(dataset_iter)
-            res_str = 'step: {}\t'.format(i)
-            for k, v in losses.items():
-                res_str += '{}: {:.2f}\t'.format(k, v)
-                print(res_str)
-
-    def train2(self, iterations=10):
+    def train(self, iterations=10):
         ddsp.training.train_util.train(self.ddsp_dataset.data_provider,
               self.trainer,
               batch_size=2,
