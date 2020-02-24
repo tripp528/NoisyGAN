@@ -80,11 +80,20 @@ class DDSP_AUTOENCODER:
         print('Prediction took %.1f seconds' % (time.time() - start_time))
         return sample["audio"], audio_gen
 
-    def train(self, iterations=10):
+    def train(self, iterations=10000):
         ddsp.training.train_util.train(self.ddsp_dataset.data_provider,
               self.trainer,
-              batch_size=2,
+              batch_size=32,
               num_steps=iterations,
-              steps_per_summary=5,
-              steps_per_save=5,
+              steps_per_summary=300,
+              steps_per_save=300,
               model_dir=self.model_dir)
+
+        # default stuff:
+        # data_provider,
+        #   trainer,
+        #   batch_size=32,
+        #   num_steps=1000000,
+        #   steps_per_summary=300,
+        #   steps_per_save=300,
+        #   model_dir='~/tmp/ddsp'
