@@ -32,6 +32,7 @@ class DDSP_DATASET:
     def buildTFRecords(self):
         # both params are strings not lists
         # TODO: Make it take a list of filepatterns
+        logging.info("Building TFRecords")
 
         if not glob.glob(self.input_audio_filepattern):
             raise ValueError('No audio files found. Please use the previous cell to '
@@ -42,21 +43,21 @@ class DDSP_DATASET:
         input_audio_paths = []
         input_audio_paths.extend(tf.io.gfile.glob(self.input_audio_filepattern))
 
-        # prepare_tfrecord(
-        #     input_audio_paths,
-        #     output_tfrecord_path,
-        #     num_shards=10,
-        #     sample_rate=sample_rate)
+        # command = ['ddsp_prepare_tfrecord',
+        #           '--input_audio_filepatterns='+self.input_audio_filepattern,
+        #           '--output_tfrecord_path='+self.output_tfrecord_path,
+        #           '--num_shards=10',
+        #           '--alsologtostderr']
+        #
+        # print(command)
+        #
+        # output = subprocess.run(command, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        command = ['ddsp_prepare_tfrecord',
-                  '--input_audio_filepatterns='+self.input_audio_filepattern,
-                  '--output_tfrecord_path='+self.output_tfrecord_path,
-                  '--num_shards=10',
-                  '--alsologtostderr']
-
-        print(command)
-
-        output = subprocess.run(command, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        prepare_tfrecord(
+            input_audio_paths,
+            self.output_tfrecord_path,
+            num_shards=10,
+            pipeline_options='--runner=DirectRunner')
 
     def getDataset(self):
         return self.data_provider.get_batch(batch_size=1, shuffle=False).take(1).repeat()
