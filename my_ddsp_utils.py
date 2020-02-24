@@ -1,10 +1,11 @@
 import os
 
+from absl import logging
 import matplotlib.pyplot as plt
 plt.style.use("dark_background")
 import numpy as np
-import warnings
-warnings.filterwarnings("ignore")
+# import warnings
+# warnings.filterwarnings("ignore")
 
 import librosa, librosa.display #display explicitly, bug https://github.com/librosa/librosa/issues/343
 

@@ -1,7 +1,6 @@
 import pickle
 
 from absl import logging
-import tensorflow as tf
 
 from ddsp_autoencoder import *
 
@@ -13,7 +12,18 @@ flags.DEFINE_string("audio_input","./Data/piano/piano30s.wav","audio file")
 flags.DEFINE_string("record_pattern",'./Data/piano/piano30s.tfrecord',"where to put the tfrecords")
 flags.DEFINE_integer("iters", 30, "number iterations to train model")
 flags.DEFINE_list("gpus", None, "list of gpu addresses if using multiple")
+flags.DEFINE_boolean("gpu_limit",False,"limit on gpu memory (for linux box")
 opt = flags.FLAGS
+
+# see all logging messages
+logging.set_verbosity(logging.INFO)
+
+# gpu limit
+if opt.gpu_limit:
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    tf.config.experimental.set_virtual_device_configuration(
+            gpus[0],
+            [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4624)])
 
 # preprocess into tfrecords
 dataset = DDSP_DATASET(opt.audio_input, opt.record_pattern,buildRecords=opt.build_records)
