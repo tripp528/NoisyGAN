@@ -12,6 +12,7 @@ flags.DEFINE_string("model_dir","./models/auto/","model directory")
 flags.DEFINE_string("audio_input","./Data/piano/piano30s.wav","audio file")
 flags.DEFINE_string("record_pattern",'./Data/piano/piano30s.tfrecord',"where to put the tfrecords")
 flags.DEFINE_integer("iters", 30, "number iterations to train model")
+flags.DEFINE_list("gpus", None, "list of gpu addresses if using multiple")
 opt = flags.FLAGS
 
 # preprocess into tfrecords
@@ -19,5 +20,5 @@ dataset = DDSP_DATASET(opt.audio_input, opt.record_pattern,buildRecords=opt.buil
 
 #build model
 logging.set_verbosity(logging.INFO)
-autoencoder = DDSP_AUTOENCODER(dataset,model_dir=opt.model_dir)
+autoencoder = DDSP_AUTOENCODER(dataset,model_dir=opt.model_dir,gpus=opt.gpus)
 autoencoder.train(iterations=opt.iters)

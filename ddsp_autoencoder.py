@@ -2,11 +2,11 @@ from ddsp_dataset import *
 import gin
 
 class DDSP_AUTOENCODER:
-    def __init__(self, ddsp_dataset, model_dir, restore=False):
+    def __init__(self, ddsp_dataset, model_dir, restore=False, gpus=None):
         self.ddsp_dataset = ddsp_dataset
         self.model_dir = model_dir
         # get distribution strategy (change if using gpus/tpus)
-        self.strategy = ddsp.training.train_util.get_strategy()
+        self.strategy = ddsp.training.train_util.get_strategy(gpus=gpus)
         self.buildModel()
 
         # restore from checkpoint
