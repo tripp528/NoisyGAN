@@ -2,11 +2,11 @@ from ddsp_dataset import *
 import gin
 
 class DDSP_AUTOENCODER:
-    def __init__(self, ddsp_dataset, model_dir, restore=False):
+    def __init__(self, ddsp_dataset, model_dir, restore=False, gpus=None):
         self.ddsp_dataset = ddsp_dataset
         self.model_dir = model_dir
         # get distribution strategy (change if using gpus/tpus)
-        self.strategy = ddsp.training.train_util.get_strategy()
+        self.strategy = ddsp.training.train_util.get_strategy(gpus=gpus)
         self.buildModel()
 
         # restore from checkpoint
@@ -71,15 +71,6 @@ class DDSP_AUTOENCODER:
                                              losses=[spectral_loss])
             # self.trainer = ddsp.training.train_util.Trainer(self.model, self.strategy, learning_rate=1e-3)
 
-    def train(self, iterations=10):
-        ddsp.training.train_util.train(self.ddsp_dataset.data_provider,
-              self.trainer,
-              batch_size=2,
-              num_steps=iterations,
-              steps_per_summary=5,
-              steps_per_save=5,
-              model_dir=self.model_dir)
-
     def predict(self, sampleNum=0):
         # Run a batch of predictions.
         sample = self.ddsp_dataset.getSample(sampleNum=sampleNum)
@@ -88,3 +79,21 @@ class DDSP_AUTOENCODER:
         audio_gen = controls['processor_group']['signal']
         print('Prediction took %.1f seconds' % (time.time() - start_time))
         return sample["audio"], audio_gen
+
+    def train(self, iterations=10000):
+        ddsp.training.train_util.train(self.ddsp_dataset.data_provider,
+              self.trainer,
+              batch_size=32,
+              num_steps=iterations,
+              steps_per_summary=300,
+              steps_per_save=300,
+              model_dir=self.model_dir)
+
+        # default stuff:
+        # data_provider,
+        #   trainer,
+        #   batch_size=32,
+        #   num_steps=1000000,
+        #   steps_per_summary=300,
+        #   steps_per_save=300,
+        #   model_dir='~/tmp/ddsp'
