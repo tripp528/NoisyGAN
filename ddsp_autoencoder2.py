@@ -2,7 +2,7 @@ from ddsp_dataset import *
 import gin
 
 class DDSP_AUTOENCODER2(ddsp.training.train_util.Trainer):
-    """Extension of Trainer - which combines model, (gpu) strategy, and optimizer"""
+    """Extension of Trainer - which combines model, (gpu/cpu) strategy, and optimizer"""
 
     def __init__(self, tfrecord_pattern, model_dir, audio_input=None, restore=False, gpus=None):
         self.ddsp_dataset = DDSP_DATASET(tfrecord_pattern, audio_input=audio_input)
@@ -90,21 +90,25 @@ class DDSP_AUTOENCODER2(ddsp.training.train_util.Trainer):
         return sample["audio"], audio_gen
 
     def train(self, iterations=10000):
-        ddsp.training.train_util.train(self.ddsp_dataset.data_provider,
-              self,
-              batch_size=32,
-              num_steps=iterations,
-              steps_per_summary=10,
-              steps_per_save=10,
-              model_dir=self.model_dir)
-            # default stuff:
-            # data_provider,
-            #   trainer,
-            #   batch_size=32,
-            #   num_steps=1000000,
-            #   steps_per_summary=300,
-            #   steps_per_save=300,
-            #   model_dir='~/tmp/ddsp'
+        """
+        Calls ddsp.training.train_util.train, and passes in self as the trainer
+
+            default stuff:
+                          batch_size=32,
+                          num_steps=1000000,
+                          steps_per_summary=300,
+                          steps_per_save=300,
+                          model_dir='~/tmp/ddsp' """
+
+        ddsp.training.train_util.train(
+                self.ddsp_dataset.data_provider,
+                self,
+                batch_size=32,
+                num_steps=iterations,
+                steps_per_summary=10,
+                steps_per_save=10,
+                model_dir=self.model_dir)
+
 
     def call_restore(self):
         self.model_dir = find_model_dir(self.model_dir)
