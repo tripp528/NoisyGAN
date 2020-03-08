@@ -1,13 +1,16 @@
 import os
 
 from absl import logging
+# see all logging messages
+logging.set_verbosity(logging.INFO)
+
 import matplotlib.pyplot as plt
 plt.style.use("dark_background")
 import numpy as np
 # import warnings
 # warnings.filterwarnings("ignore")
 
-import librosa, librosa.display #display explicitly, bug https://github.com/librosa/librosa/issues/343
+import librosa, librosa.display # display explicitly, bug https://github.com/librosa/librosa/issues/343
 
 DEFAULT_SAMPLE_RATE = 16000 # how many samples per second
 DEFAULT_N_SAMPLES = DEFAULT_SAMPLE_RATE * 4 # each sample is 4 seconds by default.
@@ -58,8 +61,9 @@ def find_model_dir(dir_name):
     # Iterate through directories until model directory is found
     for root, dirs, filenames in os.walk(dir_name):
         for filename in filenames:
+            # TODO: Figure out why gin is here and take it out 
             if filename.endswith(".gin") and not filename.startswith("."):
                 model_dir = root
-                print("found", model_dir)
+                logging.info("found " + model_dir)
                 break
         return model_dir

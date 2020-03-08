@@ -1,4 +1,4 @@
-from .Solo_Autoencoder import *
+from .solo_autoencoder import *
 
 class DDSP_TRAINER(ddsp.training.train_util.Trainer):
     """ Extension of Trainer, which is defined as:
@@ -57,7 +57,7 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
         start_time = time.time()
         controls =  self.model.get_controls(sample)
         audio_gen = controls['processor_group']['signal']
-        print('Prediction took %.1f seconds' % (time.time() - start_time))
+        logging.info('Prediction took %.1f seconds' % (time.time() - start_time))
         return sample["audio"], audio_gen
 
     def train(self, iterations=10000):
