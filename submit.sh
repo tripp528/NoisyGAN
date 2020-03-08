@@ -20,4 +20,4 @@
 cd ${SLURM_SUBMIT_DIR}
 # your job execution follows:
 source activate ddsp
-time python ~/scratch/NoisyGAN/script.py --iters=100
+time python ~/scratch/NoisyGAN/script.py --iters=1 --model_dir=./models/nsynth-auto/  --tfrecord_pattern=./Data/NSynth/val/flute_acoustic_002.tfrecord
