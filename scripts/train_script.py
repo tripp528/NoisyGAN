@@ -2,8 +2,7 @@ import pickle
 
 from absl import logging
 
-from ddsp_autoencoder import *
-from ddsp_autoencoder2 import DDSP_AUTOENCODER2
+from ddsp_autoencoder3 import *
 
 # get flags from command line
 flags = tf.compat.v1.flags
@@ -28,5 +27,7 @@ if opt.gpu_limit:
 
 #build model
 logging.set_verbosity(logging.INFO)
-autoencoder = DDSP_AUTOENCODER2(opt.tfrecord_pattern,model_dir=opt.model_dir,audio_input=opt.audio_input,gpus=opt.gpus)
-autoencoder.train(iterations=opt.iters)
+train_set = DDSP_DATASET(opt.tfrecord_pattern, audio_input=opt.audio_input)
+model = Solo_Autoencoder()
+trainer = DDSP_TRAINER(model,model_dir=opt.model_dir,gpus=opt.gpus)
+autoencoder.train(train,iterations=opt.iters)

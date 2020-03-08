@@ -42,7 +42,7 @@ class DDSP_AUTOENCODER2(ddsp.training.train_util.Trainer):
 
         # Create Processors.
         additive = ddsp.synths.Additive(n_samples=self.ddsp_dataset.n_samples,
-                                        sample_rate=sample_rate,
+                                        sample_rate=DEFAULT_SAMPLE_RATE,
                                         name='additive')
 
         noise = ddsp.synths.FilteredNoise(window_size=0,

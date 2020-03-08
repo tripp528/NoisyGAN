@@ -9,14 +9,14 @@ import numpy as np
 
 import librosa, librosa.display #display explicitly, bug https://github.com/librosa/librosa/issues/343
 
-DEFAULT_SAMPLE_RATE = 16000
-sample_rate = DEFAULT_SAMPLE_RATE
+DEFAULT_SAMPLE_RATE = 16000 # how many samples per second
+DEFAULT_N_SAMPLES = DEFAULT_SAMPLE_RATE * 4 # each sample is 4 seconds by default.
 
 
 def plotControls(amplitudes, harmonic_distribution, f0_hz):
     '''Plots the controls (inputs) to a ddsp processor'''
 
-    time = np.linspace(0, n_samples / sample_rate, n_frames)
+    time = np.linspace(0, n_samples / DEFAULT_SAMPLE_RATE, n_frames)
 
     plt.figure(figsize=(18, 4))
     plt.subplot(131)

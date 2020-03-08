@@ -27,7 +27,7 @@ class DDSP_DATASET:
 
         # get the data provider
         self.data_provider = ddsp.training.data.TFRecordProvider(self.train_file_pattern)
-        self.n_samples = list(iter(self.data_provider.get_dataset(shuffle=False)))[0]["audio"].shape[0]
+        self.n_samples = self.get_n_samples()
 
     def buildTFRecords(self):
         # both params are strings not lists
@@ -72,3 +72,6 @@ class DDSP_DATASET:
         sample = samples[sampleNum]
         audio = sample["audio"]
         return audio
+
+    def get_n_samples(self):
+        return self.getAudio().shape[0]
