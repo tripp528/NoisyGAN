@@ -16,13 +16,13 @@ from ddsp.training.data_preparation.prepare_tfrecord_lib import prepare_tfrecord
 from my_ddsp_utils import *
 
 class DDSP_DATASET:
-    def __init__(self,input_audio_filepattern,output_tfrecord_path, buildRecords=True):
-        self.input_audio_filepattern = input_audio_filepattern
+    def __init__(self,output_tfrecord_path, audio_input=None):
+        self.audio_input = audio_input
         self.output_tfrecord_path = output_tfrecord_path
         self.train_file_pattern = self.output_tfrecord_path+"*"
 
         # build the TFRecords
-        if buildRecords:
+        if audio_input:
             self.buildTFRecords()
 
         # get the data provider
@@ -34,14 +34,14 @@ class DDSP_DATASET:
         # TODO: Make it take a list of filepatterns
         logging.info("Building TFRecords")
 
-        if not glob.glob(self.input_audio_filepattern):
+        if not glob.glob(self.audio_input):
             raise ValueError('No audio files found. Please use the previous cell to '
                             'upload.')
         else:
-            print("found", self.input_audio_filepattern)
+            print("found", self.audio_input)
 
         input_audio_paths = []
-        input_audio_paths.extend(tf.io.gfile.glob(self.input_audio_filepattern))
+        input_audio_paths.extend(tf.io.gfile.glob(self.audio_input))
 
         # command = ['ddsp_prepare_tfrecord',
         #           '--input_audio_filepatterns='+self.input_audio_filepattern,
