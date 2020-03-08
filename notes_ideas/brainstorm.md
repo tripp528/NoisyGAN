@@ -30,3 +30,8 @@ cons:
 
 
 Yes! Using option 3!
+
+- But now it can't build the model, because there's no dataset.
+  (it uses forward pass to build)
+
+- maybe don't build until train / predict?

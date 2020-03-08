@@ -10,6 +10,8 @@ import numpy as np
 # import warnings
 # warnings.filterwarnings("ignore")
 
+import IPython.display as ipd
+
 import librosa, librosa.display # display explicitly, bug https://github.com/librosa/librosa/issues/343
 
 DEFAULT_SAMPLE_RATE = 16000 # how many samples per second
@@ -54,14 +56,13 @@ def wavePlot(audio):
 
 def play(audio, sr=DEFAULT_SAMPLE_RATE):
     '''takes a tensor as input (from ddsp)'''
-    import IPython.display as ipd
-    return ipd.Audio(audio, rate=sr)
+    return ipd.display(ipd.Audio(audio, rate=sr))
 
 def find_model_dir(dir_name):
     # Iterate through directories until model directory is found
     for root, dirs, filenames in os.walk(dir_name):
         for filename in filenames:
-            # TODO: Figure out why gin is here and take it out 
+            # TODO: Figure out why gin is here and take it out
             if filename.endswith(".gin") and not filename.startswith("."):
                 model_dir = root
                 logging.info("found " + model_dir)

@@ -1,7 +1,7 @@
 from .ddsp_dataset import *
 import gin
 
-@gin.configurable # I think we need this to use get_controls()... TODO: TEST THAT OUT
+# @gin.configurable # I think we need this to use get_controls()... TODO: TEST THAT OUT
 class Solo_Autoencoder(ddsp.training.models.Model):
 
     def __init__(self):
@@ -11,13 +11,13 @@ class Solo_Autoencoder(ddsp.training.models.Model):
 
         """
 
+        # call init of ddsp.training.models.Model (which calls keras.Model.__init__)
+        super().__init__(name='autoencoder', losses=self.buildLosses())
+
         self.preprocessor = self.buildPreprocessor()
         self.encoder = self.buildEncoder()
         self.decoder = self.buildDecoder()
         self.processor_group = self.buildProcessorGroup()
-
-        # call init of ddsp.training.models.Model
-        super().__init__(name='autoencoder2', losses=self.buildLosses())
 
     def call(self, features, training=True):
         """ Run the core of the network, get predictions and loss.
@@ -39,7 +39,7 @@ class Solo_Autoencoder(ddsp.training.models.Model):
         encoded = preprocessed if self.encoder is None else self.encoder(preprocessed)
 
         # decoding layer
-        decoded = self.decoder(conditioning, training=training)
+        decoded = self.decoder(encoded, training=training)
         processor_inputs = decoded
 
         # run it through the processor group (the synth & effects)
@@ -65,7 +65,7 @@ class Solo_Autoencoder(ddsp.training.models.Model):
         encoded = preprocessed if self.encoder is None else self.encoder(preprocessed)
 
         # decoding layer
-        decoded = self.decoder(conditioning, training=training)
+        decoded = self.decoder(encoded, training=training)
         processor_inputs = decoded
 
         # get the controls
