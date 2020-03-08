@@ -7,7 +7,7 @@
 #SBATCH --ntasks=32
 # Request GPUs
 #SBATCH --gres=gpu:1
-# Request memory 
+# Request memory
 #SBATCH --mem=16G
 # Maximum runtime of 10 minutes
 #SBATCH --time=10:00

@@ -1,22 +1,27 @@
 import os
 
 from absl import logging
+# see all logging messages
+logging.set_verbosity(logging.INFO)
+
 import matplotlib.pyplot as plt
 plt.style.use("dark_background")
 import numpy as np
 # import warnings
 # warnings.filterwarnings("ignore")
 
-import librosa, librosa.display #display explicitly, bug https://github.com/librosa/librosa/issues/343
+import IPython.display as ipd
 
-DEFAULT_SAMPLE_RATE = 16000
-sample_rate = DEFAULT_SAMPLE_RATE
+import librosa, librosa.display # display explicitly, bug https://github.com/librosa/librosa/issues/343
+
+DEFAULT_SAMPLE_RATE = 16000 # how many samples per second
+DEFAULT_N_SAMPLES = DEFAULT_SAMPLE_RATE * 4 # each sample is 4 seconds by default.
 
 
 def plotControls(amplitudes, harmonic_distribution, f0_hz):
     '''Plots the controls (inputs) to a ddsp processor'''
 
-    time = np.linspace(0, n_samples / sample_rate, n_frames)
+    time = np.linspace(0, n_samples / DEFAULT_SAMPLE_RATE, n_frames)
 
     plt.figure(figsize=(18, 4))
     plt.subplot(131)
@@ -51,15 +56,15 @@ def wavePlot(audio):
 
 def play(audio, sr=DEFAULT_SAMPLE_RATE):
     '''takes a tensor as input (from ddsp)'''
-    import IPython.display as ipd
-    return ipd.Audio(audio, rate=sr)
+    return ipd.display(ipd.Audio(audio, rate=sr))
 
 def find_model_dir(dir_name):
     # Iterate through directories until model directory is found
     for root, dirs, filenames in os.walk(dir_name):
         for filename in filenames:
+            # TODO: Figure out why gin is here and take it out
             if filename.endswith(".gin") and not filename.startswith("."):
                 model_dir = root
-                print("found", model_dir)
+                logging.info("found " + model_dir)
                 break
         return model_dir
