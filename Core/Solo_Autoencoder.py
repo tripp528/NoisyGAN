@@ -1,4 +1,4 @@
-from ddsp_dataset import *
+from .ddsp_dataset import *
 import gin
 
 @gin.configurable # I think we need this to use get_controls()... TODO: TEST THAT OUT

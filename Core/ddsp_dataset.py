@@ -1,6 +1,8 @@
+# local imports
+from .my_ddsp_utils import *
+
 import glob
 import time
-import os
 import subprocess
 
 import tensorflow.compat.v1 as tf
@@ -11,9 +13,6 @@ import tensorflow_datasets as tfds
 import ddsp
 import ddsp.training
 from ddsp.training.data_preparation.prepare_tfrecord_lib import prepare_tfrecord
-
-# local imports
-from my_ddsp_utils import *
 
 class DDSP_DATASET:
     def __init__(self,output_tfrecord_path, audio_input=None):
