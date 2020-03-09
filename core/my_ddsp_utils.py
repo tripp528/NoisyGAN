@@ -10,8 +10,6 @@ import numpy as np
 # import warnings
 # warnings.filterwarnings("ignore")
 
-import IPython.display as ipd
-
 import librosa, librosa.display # display explicitly, bug https://github.com/librosa/librosa/issues/343
 
 DEFAULT_SAMPLE_RATE = 16000 # how many samples per second
@@ -56,6 +54,7 @@ def wavePlot(audio):
 
 def play(audio, sr=DEFAULT_SAMPLE_RATE):
     '''takes a tensor as input (from ddsp)'''
+    import IPython.display as ipd # import here to not install on vacc 
     return ipd.display(ipd.Audio(audio, rate=sr))
 
 def find_model_dir(dir_name):
