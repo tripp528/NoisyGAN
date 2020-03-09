@@ -20,4 +20,4 @@
 cd ${SLURM_SUBMIT_DIR}/..
 # your job execution follows:
 source activate ddsp
-time python -m scripts.train
+time python -m train
