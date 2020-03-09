@@ -1,10 +1,12 @@
+# local imports
+from .my_ddsp_utils import *
+
 import glob
 import time
-import os
 import subprocess
 
 import tensorflow.compat.v1 as tf
-print("tf versionn: ",tf.__version__)
+logging.info("tf versionn: " + str(tf.__version__))
 # tf.compat.v1.enable_v2_behavior()
 import tensorflow_datasets as tfds
 
@@ -12,11 +14,14 @@ import ddsp
 import ddsp.training
 from ddsp.training.data_preparation.prepare_tfrecord_lib import prepare_tfrecord
 
-# local imports
-from my_ddsp_utils import *
-
 class DDSP_DATASET:
     def __init__(self,output_tfrecord_path, audio_input=None):
+        """
+        output_tfrecord_path: filepattern string (not list)
+        audio_input: filepattern string (not list)
+
+        TODO: Make these both lists of filepatterns
+        """
         self.audio_input = audio_input
         self.output_tfrecord_path = output_tfrecord_path
         self.train_file_pattern = self.output_tfrecord_path+"*"
@@ -27,31 +32,19 @@ class DDSP_DATASET:
 
         # get the data provider
         self.data_provider = ddsp.training.data.TFRecordProvider(self.train_file_pattern)
-        self.n_samples = list(iter(self.data_provider.get_dataset(shuffle=False)))[0]["audio"].shape[0]
+        self.n_samples = self.get_n_samples()
 
     def buildTFRecords(self):
-        # both params are strings not lists
-        # TODO: Make it take a list of filepatterns
         logging.info("Building TFRecords")
 
         if not glob.glob(self.audio_input):
             raise ValueError('No audio files found. Please use the previous cell to '
                             'upload.')
         else:
-            print("found", self.audio_input)
+            logging.info("found " + self.audio_input)
 
         input_audio_paths = []
         input_audio_paths.extend(tf.io.gfile.glob(self.audio_input))
-
-        # command = ['ddsp_prepare_tfrecord',
-        #           '--input_audio_filepatterns='+self.input_audio_filepattern,
-        #           '--output_tfrecord_path='+self.output_tfrecord_path,
-        #           '--num_shards=10',
-        #           '--alsologtostderr']
-        #
-        # print(command)
-        #
-        # output = subprocess.run(command, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         prepare_tfrecord(
             input_audio_paths,
@@ -72,3 +65,6 @@ class DDSP_DATASET:
         sample = samples[sampleNum]
         audio = sample["audio"]
         return audio
+
+    def get_n_samples(self):
+        return self.getAudio().shape[0]
