@@ -17,7 +17,7 @@
 # %x=job-name %j=jobid
 #SBATCH --output=./models/console/%x_%j.out
 # change to the directory where you submitted this script
-cd ${SLURM_SUBMIT_DIR}/..
+cd ${SLURM_SUBMIT_DIR}
 # your job execution follows:
 source activate ddsp
-time python -m train
+time python train.py
