@@ -1,5 +1,4 @@
-# from core import *
-from core.ddsp_trainer import *
+from core import *
 
 # get flags from command line
 flags = tf.compat.v1.flags
