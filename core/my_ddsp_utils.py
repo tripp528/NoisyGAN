@@ -54,7 +54,7 @@ def wavePlot(audio):
 
 def play(audio, sr=DEFAULT_SAMPLE_RATE):
     '''takes a tensor as input (from ddsp)'''
-    import IPython.display as ipd # import here to not install on vacc 
+    import IPython.display as ipd # import here to not install on vacc
     return ipd.display(ipd.Audio(audio, rate=sr))
 
 def find_model_dir(dir_name):
@@ -65,5 +65,10 @@ def find_model_dir(dir_name):
             if filename.endswith(".gin") and not filename.startswith("."):
                 model_dir = root
                 logging.info("found " + model_dir)
-                break
-        return model_dir
+                return model_dir, True
+
+        # empty model dir
+        return dir_name, False
+
+    # no model dir
+    return dir_name, False

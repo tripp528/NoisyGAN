@@ -1,4 +1,5 @@
 from .solo_autoencoder import *
+from .gan import *
 
 class DDSP_TRAINER(ddsp.training.train_util.Trainer):
     """ Extension of Trainer, which is defined as:
@@ -21,10 +22,11 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
         need to use the model class directly.
         TODO: take in a string, and construct a different model depending on the string.
     """
-    def __init__(self, model_dir, restore=False, gpus=None):
-        self.model_dir = find_model_dir(model_dir)
+    def __init__(self, model_dir, restore=False, gpus=None, model_type="solo"):
+        self.model_dir, self.found_model_dir = find_model_dir(model_dir)
+        logging.info("MODEL_DIR: " + str(self.model_dir) + " FOUND: " + str(self.found_model_dir))
         self.strategy = ddsp.training.train_util.get_strategy(gpus=gpus) # get distribution strategy (change if using gpus/tpus)
-        self.model = self.buildModel()
+        self.model = self.buildModel(model_type)
 
         super().__init__(self.model,
                         self.strategy,
@@ -36,11 +38,15 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
 
         # AUTOMATICALLY restore from checkpoint. If you want to not restore, clear the
         # model dir or set a new model dir.
-        self.auto_restore()
+        if (self.found_model_dir):
+            self.auto_restore()
 
-    def buildModel(self):
+    def buildModel(self,model_type):
         with self.strategy.scope():
-            return Solo_Autoencoder()
+            if model_type ==  "solo":
+                return Solo_Autoencoder()
+            elif model_type == "gan":
+                return GAN()
 
     def predict(self, dataset, sampleNum=0):
         """Run a batch of predictions."""
@@ -62,17 +68,20 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
                           steps_per_save=300,
                           model_dir='~/tmp/ddsp'
         """
-        self.auto_restore()
+        # self.auto_restore()
         ddsp.training.train_util.train(
                 dataset.data_provider,
                 self,
                 batch_size=32,
                 num_steps=iterations,
                 steps_per_summary=10,
-                steps_per_save=10,
+                steps_per_save=1,
                 model_dir=self.model_dir)
 
     def auto_restore(self):
         ckpt = ddsp.training.train_util.get_latest_chekpoint(self.model_dir)
-        logging.info("restoring... "+ckpt)
-        self.restore(ckpt)
+        if ckpt:
+            logging.info("restoring... "+ckpt)
+            self.restore(ckpt)
+        else:
+            logging.info("no checkpoint found in model_dir")
