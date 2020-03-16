@@ -38,6 +38,10 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
 
         # AUTOMATICALLY restore from checkpoint. If you want to not restore, clear the
         # model dir or set a new model dir.
+
+        # Build model, easiest to just run forward pass.
+        # trainer.build(next(dataset_iter))  TODO: does this fix model_dir problem?
+
         if (self.found_model_dir):
             self.auto_restore()
 
