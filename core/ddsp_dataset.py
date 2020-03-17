@@ -60,6 +60,11 @@ class DDSP_DATASET:
         sample = samples[sampleNum]
         return sample
 
+    def getBatch(self,howmany,startNum=0):
+        samples = list(iter(self.data_provider.get_dataset(shuffle=False)))
+        sample = np.array(samples[startNum:howmany+startNum])
+        return sample
+
     def getAudio(self,sampleNum=0):
         samples = list(iter(self.data_provider.get_dataset(shuffle=False)))
         sample = samples[sampleNum]

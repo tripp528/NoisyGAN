@@ -57,6 +57,11 @@ def play(audio, sr=DEFAULT_SAMPLE_RATE):
     import IPython.display as ipd # import here to not install on vacc
     return ipd.display(ipd.Audio(audio, rate=sr))
 
+def describeSample(sample):
+    for key in sample.keys():
+        print(key + ":", sample[key].shape, "Range:", \
+                sample[key].numpy().min(), sample[key].numpy().max())
+
 def find_model_dir(dir_name):
     # Iterate through directories until model directory is found
     for root, dirs, filenames in os.walk(dir_name):

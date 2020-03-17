@@ -1,5 +1,5 @@
 from .solo_autoencoder import *
-from .gan import *
+from .generator import *
 
 class DDSP_TRAINER(ddsp.training.train_util.Trainer):
     """ Extension of Trainer, which is defined as:
@@ -56,10 +56,21 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
         """Run a batch of predictions."""
         sample = dataset.getSample(sampleNum=sampleNum)
         start_time = time.time()
-        controls =  self.model.get_controls(sample)
-        audio_gen = controls['processor_group']['signal']
+        # controls =  self.model.get_controls(sample)
+        # audio_gen = controls['processor_group']['signal']
+        audio_gen = self.model.call(sample,training=False) # try doing self.run for a batch?
         logging.info('Prediction took %.1f seconds' % (time.time() - start_time))
         return sample["audio"], audio_gen
+
+    # def predict_batch(self, dataset, batch_size=4):
+    #     """Run a batch of predictions."""
+    #     dataset = self.data_provider.get_batch(batch_size, shuffle=True, repeats=-1)
+    #     dataset = trainer.distribute_dataset(dataset)
+    #     dataset_iter = iter(dataset)
+    #
+    #     audio_gens = self.run(sample,training=False) # try doing self.run for a batch?
+    #     logging.info('Prediction took %.1f seconds' % (time.time() - start_time))
+    #     return sample["audio"], audio_gen
 
     def train(self, dataset, iterations=10000):
         """
