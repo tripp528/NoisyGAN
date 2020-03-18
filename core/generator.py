@@ -117,8 +117,14 @@ class Generator(tf.keras.layers.Layer):
         self.build(None)
         self.showSummery()
 
-    def generate(self):
-        return self.call(None)
+    def generate(self,label=0):
+        sample = self.call(None)
+        squeezedSample = {}
+        useKeys = ["audio","f0_hz","loudness_db"]
+        for key in useKeys:
+            squeezedSample[key] = tf.squeeze(sample[key])
+        squeezedSample["label"] = tf.convert_to_tensor([float(label)])
+        return squeezedSample
 
     def call(self,inputs):
         generated = self.latent_generator(None) # no inputs. generating
