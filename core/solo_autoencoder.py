@@ -32,6 +32,7 @@ class Solo_Autoencoder(ddsp.training.models.Model):
             I decided to just put all four here. Makes it more generalizeable to
                 non-Autoencoder models (like GAN).
         """
+
         # preprocessing layer
         preprocessed = self.preprocessor(features, training=training)
 

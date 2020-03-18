@@ -59,9 +59,12 @@ def play(audio, sr=DEFAULT_SAMPLE_RATE):
 
 def describeSample(sample):
     for key in sample.keys():
-        print(key + ":", sample[key].shape, "Range:", \
-                sample[key].numpy().min(), sample[key].numpy().max(),\
-                "type:", type(sample[key]))
+        print(key + ":", sample[key].shape, \
+                # "Range:", \
+                # tf.keras.backend.min(sample[key]),
+                # tf.keras.backend.max(sample[key]),\
+                # "type:", type(sample[key]), \
+                )
 
 def find_model_dir(dir_name):
     # Iterate through directories until model directory is found
