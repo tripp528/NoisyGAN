@@ -22,11 +22,11 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
         need to use the model class directly.
         TODO: take in a string, and construct a different model depending on the string.
     """
-    def __init__(self, model_dir, restore=False, gpus=None, model_type="solo"):
+    def __init__(self, model_dir, model, restore=False, gpus=None):
         self.model_dir, self.found_model_dir = find_model_dir(model_dir)
         logging.info("MODEL_DIR: " + str(self.model_dir) + " FOUND: " + str(self.found_model_dir))
         self.strategy = ddsp.training.train_util.get_strategy(gpus=gpus) # get distribution strategy (change if using gpus/tpus)
-        self.model = self.buildModel(model_type)
+        self.model = model
 
         super().__init__(self.model,
                         self.strategy,
@@ -45,12 +45,12 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
         if (self.found_model_dir):
             self.auto_restore()
 
-    def buildModel(self,model_type):
-        with self.strategy.scope():
-            if model_type ==  "solo":
-                return Solo_Autoencoder()
-            elif model_type == "gan":
-                return GAN()
+    # def buildModel(self,model_type):
+    #     with self.strategy.scope():
+    #         if model_type ==  "solo":
+    #             return Solo_Autoencoder()
+    #         elif model_type == "gan":
+    #             return GAN()
 
     def predict(self, dataset, sampleNum=0):
         """Run a batch of predictions."""
@@ -92,6 +92,67 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
                 steps_per_summary=10,
                 steps_per_save=1,
                 model_dir=self.model_dir)
+
+    def trainDisc(self, dataset, iterations=2):
+
+        data_provider = dataset.data_provider
+        trainer = self
+        batch_size = 32
+        num_steps = iterations
+        steps_per_summary = 10
+        steps_per_save = 1
+        model_dir = self.model_dir
+
+        """Main training loop."""
+        # Get a distributed dataset.
+        dataset = data_provider.get_batch(batch_size, shuffle=True, repeats=-1)
+        dataset = trainer.distribute_dataset(dataset)
+        dataset_iter = iter(dataset)
+
+        # Build model, easiest to just run forward pass.
+        trainer.build(next(dataset_iter))
+
+        # Load latest checkpoint if one exists in model_dir.
+        trainer.restore(model_dir)
+
+        # Create training loss metrics.
+        avg_losses = {name: tf.keras.metrics.Mean(name=name, dtype=tf.float32)
+                for name in trainer.model.loss_names}
+
+        # Set up the summary writer and metrics.
+        summary_dir = os.path.join(model_dir, 'summaries', 'train')
+        summary_writer = tf.summary.create_file_writer(summary_dir)
+
+        # Save the gin config.
+        write_gin_config(summary_writer, model_dir, trainer.step.numpy())
+
+        # Train.
+        with summary_writer.as_default():
+            for _ in range(num_steps):
+                step = trainer.step
+
+                # Take a step.
+                losses = trainer.train_step(dataset_iter)
+
+                # Update metrics.
+                for k, v in losses.items():
+                    avg_losses[k].update_state(v)
+
+                    # Log the step.
+                    logging.info('Step:%d Loss:%.2f', step, losses['total_loss'])
+
+                    # Write Summaries.
+                    if step % steps_per_summary == 0:
+                        for k, metric in avg_losses.items():
+                            tf.summary.scalar('losses/{}'.format(k), metric.result(), step=step)
+                            metric.reset_states()
+
+                    # Save Model.
+                    if step % steps_per_save == 0:
+                        trainer.save(model_dir)
+                        summary_writer.flush()
+
+                logging.info('Training Finished!')
 
     def auto_restore(self):
         ckpt = ddsp.training.train_util.get_latest_chekpoint(self.model_dir)

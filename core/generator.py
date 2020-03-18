@@ -12,7 +12,7 @@ from ddsp.core import midi_to_hz
 from ddsp.spectral_ops import F0_RANGE, LD_RANGE
 
 class UnPreprocessor(ddsp.training.preprocessing.Preprocessor):
-
+    """Get (f0_hz and loudness_db) from (f0_scaled and ld_scaled)"""
     def __init__(self, time_steps=1000):
         super().__init__()
         self.time_steps = time_steps
@@ -38,7 +38,9 @@ class LatentGenerator(tf.keras.layers.Layer):
     # TODO: only does one at a time
     def __init__(self,
                  latent_dim=100,
-                 output_splits=(('f0_scaled', 1), ('ld_scaled', 1)),
+                 output_splits=(('f0_scaled', 1),
+                                ('ld_scaled', 1),
+                                ('z', 6)),
                  name="LatentGenerator"):
         super().__init__(name=name)
         self.latent_dim = latent_dim
@@ -55,10 +57,13 @@ class LatentGenerator(tf.keras.layers.Layer):
         upsampled = self.upsampler(latent) # (1, 2, 1000, 1)
         # instead of squeezing make a for loop here...
         upsampled = np.squeeze(upsampled,axis=0) # (2, 1000, 1)
-        f, l = upsampled[0], upsampled[1]
-        f = tf.convert_to_tensor(np.expand_dims(f,axis=0))
-        l = tf.convert_to_tensor(np.expand_dims(l,axis=0))
-        x = tf.concat([f, l], axis=-1)
+        f, l, z =   np.expand_dims(upsampled[0],axis=0), \
+                    np.expand_dims(upsampled[1], axis=0), \
+                    upsampled[2:].T
+
+        flz = np.concatenate((f,l,z),axis=2)
+        x = tf.convert_to_tensor(flz)
+        # convert to dictionary
         outputs = ddsp.training.nn.split_to_dict(x, self.output_splits)
         return outputs
 
@@ -72,17 +77,22 @@ class LatentGenerator(tf.keras.layers.Layer):
     def buildUpsampler(self):
         # define the generator model
         generator = Sequential()
-        # foundation for 1 x 250 signal
-        n_nodes = 250 * 1 * 16
+        # foundation for 1 x 125 signal
+        n_nodes = 125 * 1 * 16
         generator.add(Dense(n_nodes, input_dim=self.latent_dim, dtype='float32'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
-        generator.add(Reshape(( 1,250, 16)))
-        # upsample to 1 x 500
-        generator.add(Conv2DTranspose(16, (3,3), strides=(1,2), padding='same'))
+        generator.add(Reshape((1, 125, 16)))
+        # upsample to 2 x 250
+        generator.add(Conv2DTranspose(16, (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
-        # upsample to 2 x 1000
+        # upsample to 4 x 500
+        generator.add(Conv2DTranspose(16, (3,3), strides=(2,2), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        generator.add(Conv2D(1, (3,3), activation='sigmoid', padding='same'))
+        # upsample to 8 x 1000
         generator.add(Conv2DTranspose(16, (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
@@ -115,7 +125,7 @@ class Generator(tf.keras.layers.Layer):
         un_processed = self.unprocessor(generated)
         decoded = self.decoder(un_processed)
         sample = decoded
-        sample['audio'] = tf.squeeze(self.processor_group(decoded))
+        sample['audio'] = self.processor_group(decoded)
         return sample
 
     def buildUnprocessor(self):
@@ -125,7 +135,7 @@ class Generator(tf.keras.layers.Layer):
 
     def buildDecoder(self):
         # rnn decoder .. TODO: figure out what this is!!
-        decoder = ddsp.training.decoders.RnnFcDecoder(
+        decoder = ddsp.training.decoders.ZRnnFcDecoder(
             rnn_channels = 256,
             rnn_type = 'gru',
             ch = 256,
