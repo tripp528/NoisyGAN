@@ -56,12 +56,12 @@ class LatentGenerator(tf.keras.layers.Layer):
         latent = self.generate_latent_point()
         upsampled = self.upsampler(latent) # (1, 2, 1000, 1)
         # instead of squeezing make a for loop here...
-        upsampled = np.squeeze(upsampled,axis=0) # (2, 1000, 1)
-        f, l, z =   np.expand_dims(upsampled[0],axis=0), \
-                    np.expand_dims(upsampled[1], axis=0), \
-                    upsampled[2:].T
+        upsampled = tf.squeeze(upsampled,axis=0) # (2, 1000, 1)
+        f, l, z =   tf.expand_dims(upsampled[0],axis=0), \
+                    tf.expand_dims(upsampled[1], axis=0), \
+                    tf.transpose(upsampled[2:])
 
-        flz = np.concatenate((f,l,z),axis=2)
+        flz = tf.concat((f,l,z),axis=2)
         x = tf.convert_to_tensor(flz)
         # convert to dictionary
         outputs = ddsp.training.nn.split_to_dict(x, self.output_splits)
@@ -72,7 +72,7 @@ class LatentGenerator(tf.keras.layers.Layer):
         latent = np.random.randn(self.latent_dim)
         # reshape into a batch of inputs for the network
         latent = latent.reshape(1, self.latent_dim)
-        return latent
+        return tf.convert_to_tensor(latent)
 
     def buildUpsampler(self):
         # define the generator model
@@ -118,6 +118,14 @@ class Generator(tf.keras.layers.Layer):
         self.showSummery()
 
     def generate(self,label=0):
+        """returns {
+
+            audio: (64000,)
+            f0_hz: (1000,)
+            loudness_db: (1000,)
+            label: (1,)
+
+        }"""
         sample = self.call(None)
         squeezedSample = {}
         useKeys = ["audio","f0_hz","loudness_db"]
@@ -125,6 +133,26 @@ class Generator(tf.keras.layers.Layer):
             squeezedSample[key] = tf.squeeze(sample[key])
         squeezedSample["label"] = tf.convert_to_tensor([float(label)])
         return squeezedSample
+
+    def generate_batch(self, label=0, batch_size=8):
+        """returns {
+
+            "audio": (batch_size, 64000),
+            "f0_hz": (batch_size, 1000),
+            "loudness_db": (batch_size, 1000)
+            label: (batch_size, 1)
+
+        }"""
+        samples = {"audio":[], "f0_hz": [], "loudness_db": [], "label": []}
+        for i in range(batch_size):
+            sample = self.generate(label=label)
+            for key in samples.keys():
+                samples[key].append(sample[key])
+
+        for key in samples.keys():
+            samples[key] = tf.convert_to_tensor(samples[key])
+
+        return samples
 
     def call(self,inputs):
         generated = self.latent_generator(None) # no inputs. generating
