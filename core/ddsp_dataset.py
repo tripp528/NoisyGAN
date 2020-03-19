@@ -5,7 +5,7 @@ import glob
 import time
 import subprocess
 
-import tensorflow.compat.v1 as tf
+import tensorflow.compat.v2 as tf
 logging.info("tf versionn: " + str(tf.__version__))
 # tf.compat.v1.enable_v2_behavior()
 import tensorflow_datasets as tfds
@@ -31,7 +31,8 @@ class DDSP_DATASET:
             self.buildTFRecords()
 
         # get the data provider
-        self.data_provider = ddsp.training.data.TFRecordProvider(self.train_file_pattern)
+        self.data_provider = DDSP_TFPROV(self.train_file_pattern)
+        # self.data_provider = ddsp.training.data.TFRecordProvider(self.train_file_pattern)
         self.n_samples = self.get_n_samples()
 
     def buildTFRecords(self):
@@ -57,7 +58,15 @@ class DDSP_DATASET:
 
     def getSample(self,sampleNum=0):
         samples = list(iter(self.data_provider.get_dataset(shuffle=False)))
-        sample = samples[sampleNum]
+        howmany = len(samples)
+        sample = samples[sampleNum % howmany]
+        # for key in sample.keys():
+        #     sample[key] = np.expand_dims(sample[key],axis=[0])
+        return sample
+
+    def getBatch(self,howmany,startNum=0):
+        samples = list(iter(self.data_provider.get_dataset(shuffle=False)))
+        sample = np.array(samples[startNum:howmany+startNum])
         return sample
 
     def getAudio(self,sampleNum=0):
@@ -68,3 +77,33 @@ class DDSP_DATASET:
 
     def get_n_samples(self):
         return self.getAudio().shape[0]
+
+
+class DDSP_TFPROV(ddsp.training.data.TFRecordProvider):
+    # TODO: right now it's always making thise labeled real
+    def __init__(self,filepattern,label=1):
+        super().__init__(filepattern)
+        self.label = label
+
+    def get_dataset(self, shuffle=True):
+        true_dataset = self.get_true_dataset(shuffle)
+        return true_dataset
+
+    def get_true_dataset(self, shuffle=True):
+        def parse_tfexample(record):
+            example = tf.io.parse_single_example(record, self.features_dict)
+            del example["f0_confidence"]
+            # for key in example.keys():
+            #     example[key] = tf.expand_dims(example[key],axis=[0])
+
+            example["label"] = tf.convert_to_tensor([1.0])
+            return example
+
+        filenames = tf.data.Dataset.list_files(self._file_pattern, shuffle=shuffle)
+        dataset = filenames.interleave(
+            map_func=tf.data.TFRecordDataset,
+            cycle_length=40,
+            num_parallel_calls=ddsp.training.data._AUTOTUNE)
+
+        dataset = dataset.map(parse_tfexample, num_parallel_calls=ddsp.training.data._AUTOTUNE)
+        return dataset
