@@ -53,16 +53,11 @@ class LatentGenerator(tf.keras.layers.Layer):
 
     def call(self,inputs):
         """Generates outputs with dictionary of f0_scaled and ld_scaled."""
-        latent = self.generate_latent_point()
-        upsampled = self.upsampler(latent) # (1, 2, 1000, 1)
-        # instead of squeezing make a for loop here...
-        upsampled = tf.squeeze(upsampled,axis=0) # (2, 1000, 1)
-        f, l, z =   tf.expand_dims(upsampled[0],axis=0), \
-                    tf.expand_dims(upsampled[1], axis=0), \
-                    tf.transpose(upsampled[2:])
+        latent = self.generate_latent_point()       # (1, 100) ( ish )
+        upsampled = self.upsampler(latent)          # (1, 8, 1000, 1)
+        upsampled = tf.squeeze(upsampled,axis=0)    # (8, 1000, 1)
+        x = tf.transpose(upsampled)                 # (1, 1000, 8)
 
-        flz = tf.concat((f,l,z),axis=2)
-        x = tf.convert_to_tensor(flz)
         # convert to dictionary
         outputs = ddsp.training.nn.split_to_dict(x, self.output_splits)
         return outputs
@@ -119,12 +114,10 @@ class Generator(tf.keras.layers.Layer):
 
     def generate(self,label=0):
         """returns {
-
             audio: (64000,)
             f0_hz: (1000,)
             loudness_db: (1000,)
             label: (1,)
-
         }"""
         sample = self.call(None)
         squeezedSample = {}
@@ -140,7 +133,7 @@ class Generator(tf.keras.layers.Layer):
             "audio": (batch_size, 64000),
             "f0_hz": (batch_size, 1000),
             "loudness_db": (batch_size, 1000)
-            label: (batch_size, 1)
+            "label": (batch_size, 1)
 
         }"""
         samples = {"audio":[], "f0_hz": [], "loudness_db": [], "label": []}
@@ -154,7 +147,7 @@ class Generator(tf.keras.layers.Layer):
 
         return samples
 
-    def call(self,inputs):
+    def call(self,inputs, label=0):
         generated = self.latent_generator(None) # no inputs. generating
         un_processed = self.unprocessor(generated)
         decoded = self.decoder(un_processed)
