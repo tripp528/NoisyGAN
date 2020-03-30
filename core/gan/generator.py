@@ -1,13 +1,10 @@
-from .ddsp_dataset import *
-
-
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
                                     Flatten,Dense,Reshape,Conv2DTranspose
 from tensorflow.keras.activations import sigmoid
 from tensorflow.keras.optimizers import Adam
 
-
+from core.utils import *
 from ddsp.core import midi_to_hz
 from ddsp.spectral_ops import F0_RANGE, LD_RANGE
 
@@ -99,7 +96,7 @@ class LatentGenerator(tf.keras.layers.Layer):
 
 class Generator(tf.keras.layers.Layer):
     def __init__(self,name='generator',latent_dim=100):
-        super().__init__(name=name)
+        super().__init__(name=name) #add Generator??
         self.latent_dim = latent_dim
 
         self.latent_generator = LatentGenerator(latent_dim=latent_dim)

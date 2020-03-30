@@ -1,17 +1,17 @@
 import os
-
 from absl import logging
-# see all logging messages
-logging.set_verbosity(logging.INFO)
-
+import glob
 import matplotlib.pyplot as plt
-plt.style.use("dark_background")
 import numpy as np
-# import warnings
-# warnings.filterwarnings("ignore")
-
 import librosa, librosa.display # display explicitly, bug https://github.com/librosa/librosa/issues/343
+import tensorflow as tf
 
+import ddsp
+import ddsp.training
+from ddsp.training.data_preparation.prepare_tfrecord_lib import prepare_tfrecord
+
+logging.set_verbosity(logging.INFO)
+plt.style.use("dark_background")
 DEFAULT_SAMPLE_RATE = 16000 # how many samples per second
 DEFAULT_N_SAMPLES = DEFAULT_SAMPLE_RATE * 4 # each sample is 4 seconds by default.
 
@@ -81,3 +81,22 @@ def find_model_dir(dir_name):
 
     # no model dir
     return dir_name, False
+
+
+def buildTFRecords(audio_input, output_tfrecord_path):
+    logging.info("Building TFRecords")
+
+    if not glob.glob(audio_input):
+        raise ValueError('No audio files found. Please use the previous cell to '
+                        'upload.')
+    else:
+        logging.info("found " + audio_input)
+
+    input_audio_paths = []
+    input_audio_paths.extend(tf.io.gfile.glob(audio_input))
+
+    prepare_tfrecord(
+        input_audio_paths,
+        output_tfrecord_path,
+        num_shards=10,
+        pipeline_options='--runner=DirectRunner')

@@ -1,6 +1,5 @@
 from .solo_autoencoder import *
-from .generator import *
-from .discriminator import *
+import time
 
 class DDSP_TRAINER(ddsp.training.train_util.Trainer):
     """ Extension of Trainer, which is defined as:
@@ -74,48 +73,13 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
         return prediction, batch['label']
 
     def train(self, dataset, iterations=10000):
-        # data_provider = dataset.data_provider
-        ddsp.training.train_util.train(dataset.data_provider,
+        ddsp.training.train_util.train(dataset,
                                         self,
                                         batch_size=self.batch_size,
                                         num_steps=iterations,
                                         steps_per_summary=50,
                                         steps_per_save=10,
                                         model_dir=self.model_dir)
-    @tf.function
-    def step_fn(self,batch):
-        # train_step
-        grad_clip_norm = 3.0
-        with tf.GradientTape() as tape:
-            _ = self.model(batch,training=True)
-            total_loss = tf.reduce_sum(self.model.losses)
-            logging.info("Train step " + "Loss: " + str(total_loss))
-        grads = tape.gradient(total_loss, self.model.trainable_variables)
-        grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
-        self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
-
-    @tf.function
-    def train_step(self, batch):
-
-
-        """Distributed training step."""
-        print("TRAIN STEP")
-        # Wrap in distribution strategy, slight speedup passing in iter vs batch.
-
-        print(batch)
-        losses = self.run(self.step_fn, batch)
-        # Add up the scalar losses across replicas.
-        n_replicas = self.strategy.num_replicas_in_sync
-        print(losses)
-        return {k: self.psum(v, axis=None) / n_replicas for k, v in losses.items()}
-
-    @tf.function
-    def train_no_strategy(self, dataset_iter, iterations=10000):
-
-
-        for i in range(iterations):
-            batch = next(dataset_iter)
-            self.train_step(batch)
 
 
     def auto_restore(self):
@@ -125,45 +89,3 @@ class DDSP_TRAINER(ddsp.training.train_util.Trainer):
             self.restore(ckpt)
         else:
             logging.info("no checkpoint found in model_dir")
-
-def train_no_strategy(dataset_iter,
-    trainer,
-    batch_size=32,
-    num_steps=1000000,
-    steps_per_summary=300,
-    steps_per_save=300,
-    model_dir='~/tmp/ddsp'):
-    """Main training loop."""
-
-    # Build model, easiest to just run forward pass.
-    trainer.build(next(dataset_iter))
-
-    # Create training loss metrics.
-    avg_losses = {name: tf.keras.metrics.Mean(name=name, dtype=tf.float32)
-                    for name in trainer.model.loss_names}
-
-    for _ in range(num_steps):
-        step = trainer.step
-
-        # Take a step.
-        losses = trainer.train_step(dataset_iter)
-
-        # Update metrics.
-        for k, v in losses.items():
-            avg_losses[k].update_state(v)
-
-            # Log the step.
-            logging.info('Step:%d Loss:%.2f', step, losses['total_loss'])
-
-            # Write Summaries.
-            # if step % steps_per_summary == 0:
-            #     for k, metric in avg_losses.items():
-            #         tf.summary.scalar('losses/{}'.format(k), metric.result(), step=step)
-            #         metric.reset_states()
-
-                # Save Model.
-                # if step % steps_per_save == 0:
-                #     trainer.save(model_dir)
-                #     summary_writer.flush()
-
-    logging.info('Training Finished!')
