@@ -1,6 +1,7 @@
-from tensorflow.keras import Sequential
+from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
-                                    Flatten,Dense,Reshape,Conv2DTranspose
+                                    Flatten,Dense,Reshape,Conv2DTranspose,\
+                                    Input
 from tensorflow.keras.activations import sigmoid
 from tensorflow.keras.optimizers import Adam
 
@@ -37,7 +38,7 @@ class LatentGenerator(tf.keras.layers.Layer):
                  latent_dim=100,
                  output_splits=(('f0_scaled', 1),
                                 ('ld_scaled', 1),
-                                ('z', 8)),
+                                ('z', 6)), # Changed from 8
                  name="LatentGenerator"):
         super().__init__(name=name)
         self.latent_dim = latent_dim
@@ -53,18 +54,28 @@ class LatentGenerator(tf.keras.layers.Layer):
     def call(self,inputs):
         """Generates outputs with dictionary of f0_scaled and ld_scaled."""
         latent = self.generate_latent_point()       # (1, 100) ( ish )
-        upsampled_z = self.upsampler(latent)        # (1, 8, 1000, 1)
-        upsampled_z = tf.squeeze(upsampled_z,axis=0)# (8, 1000, 1)
+        upsampled = self.upsampler(latent)        # (1, 8, 1000, 1)
+        upsampled = tf.squeeze(upsampled,axis=0)# (8, 1000, 1)
+
+        f0_latent, ld_latent, z_latent = tf.split(upsampled, [1,1,6] , axis = 0)
 
         # test messing with f0 and ld
-        f0 = self.f0_cppn(((np.arange(1000) / (1000 - 1)) - 0.5).reshape(1,1000,1)) # (1, 1000, 1)
+        #f0_input = ((np.arange(1000, dtype='float32') / (1000 - 1)) - 0.5).reshape(1,1000,1)
+        f0_input = tf.reshape(tf.range(0,1,delta=(1/1000), dtype='float32'), (1,1000,1))
+
+        f0_latent = tf.math.add(f0_latent, f0_input)
+        f0 = self.f0_cppn(f0_latent) # (1, 1000, 1)
 
         #ld = self.ld_cppn(np.ones(1000).reshape(1,1000,1) * .7)
-        ld = self.ld_cppn(((np.arange(1000) / (1000 - 1)) - 0.5).reshape(1,1000,1))
+        #ld_input = ((np.arange(1000, dtype='float32') / (1000 - 1)) - 0.5).reshape(1,1000,1)
+        ld_input = tf.reshape(tf.range(0,1,delta=(1/1000), dtype='float32'), (1,1000,1))
+        ld_latent = tf.math.add(ld_latent, ld_input)
+        ld = self.ld_cppn(ld_latent)
 
-        ldf0 = tf.convert_to_tensor(np.float32(np.concatenate([f0,ld])))
-        upsampled = tf.concat((ldf0, upsampled_z),axis=0)
-        x = tf.transpose(upsampled)                 # (1, 1000, 10)
+        #ldf0 = tf.convert_to_tensor(np.float32(np.concatenate([f0,ld])))
+        ldf0 = tf.concat((f0,ld), axis=0)
+        upsampled = tf.concat((ldf0, z_latent),axis=0)
+        x = tf.transpose(upsampled)                 # (1, 1000, 8)
 
         # convert to dictionary
         outputs = ddsp.training.nn.split_to_dict(x, self.output_splits)
@@ -107,18 +118,27 @@ class LatentGenerator(tf.keras.layers.Layer):
     def build_f0_cppn(self, n_nodes = 100, n_hidden = 2, activation = 'relu'):
         ''' Sequential MLP, takes 1 input, returns 1 output '''
         cppn = Sequential()
-        cppn.add(Dense(n_nodes, input_dim=1, dtype='float32', activation=activation))
-
-        # Add ddense layers
-        for i in range(n_hidden):
-            cppn.add(Dense(n_nodes, activation=activation))
-
-        cppn.add(Dense(1, activation='sigmoid'))
+        cppn.add(Dense(10, input_shape=(None,1), dtype='float32', activation = 'relu'))
+        cppn.add(Dense(10, dtype='float32', activation = 'relu'))
+        cppn.add(Dense(10, dtype='float32', activation = 'relu'))
+        cppn.add(Dense(1, dtype='float32', activation='sigmoid'))
 
         return cppn
 
     def build_ld_cppn(self, n_nodes = 100, n_hidden = 2, activation = 'relu'):
         ''' Sequential MLP, takes 1 input, returns 1 output '''
+        input = Input(shape=(None,1), dtype='float32')
+        x = Dense(n_nodes, activation = activation, name = "ld_cppn_input")(input)
+
+        for i in range(n_hidden-1):
+            x = Dense(n_nodes, activation = activation, name = "ld_cppn_dense_%04d" % i)(x)
+
+        out = Dense(1, activation='sigmoid', name = "ld_cppn_output")(x)
+
+        cppn = Model(input, out)
+
+        return cppn
+        '''
         cppn = Sequential()
         cppn.add(Dense(n_nodes, input_dim=1, dtype='float32', activation=activation))
 
@@ -129,6 +149,7 @@ class LatentGenerator(tf.keras.layers.Layer):
         cppn.add(Dense(1, activation='sigmoid'))
 
         return cppn
+        '''
 
 
 
