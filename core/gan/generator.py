@@ -44,8 +44,8 @@ class LatentGenerator(tf.keras.layers.Layer):
         self.latent_dim = latent_dim
 
         #define layers
-        self.f0_cppn = self.build_f0_cppn(n_nodes = 100, n_hidden = 2, activation = 'relu')
-        self.ld_cppn = self.build_ld_cppn(n_nodes = 100, n_hidden = 2, activation = 'relu')
+        self.f0_cppn = self.build_f0_cppn(n_nodes = 100, n_hidden = 5, activation = 'tanh')
+        self.ld_cppn = self.build_ld_cppn(n_nodes = 100, n_hidden = 5, activation = 'tanh')
         self.upsampler = self.build_z_upsampler()
 
         self.output_splits = output_splits
@@ -60,8 +60,8 @@ class LatentGenerator(tf.keras.layers.Layer):
         f0_latent, ld_latent, z_latent = tf.split(upsampled, [1,1,6] , axis = 0)
 
         # test messing with f0 and ld
-        f0_input = ((np.arange(1000, dtype='float32') / (1000 - 1)) - 0.5).reshape(1,1000,1)
-        #f0_input = tf.reshape(tf.range(0,1,delta=(1/1000), dtype='float32'), (1,1000,1))
+        #f0_input = ((np.arange(1000, dtype='float32') / (1000 - 1)) - 0.5).reshape(1,1000,1)
+        f0_input = tf.reshape(tf.range(0,1,delta=(1/1000), dtype='float32'), (1,1000,1))
 
         ###f0_latent = tf.math.add(f0_latent, f0_input)
         f0 = self.f0_cppn(f0_input) # (1, 1000, 1)
