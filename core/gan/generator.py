@@ -60,17 +60,17 @@ class LatentGenerator(tf.keras.layers.Layer):
         f0_latent, ld_latent, z_latent = tf.split(upsampled, [1,1,6] , axis = 0)
 
         # test messing with f0 and ld
-        #f0_input = ((np.arange(1000, dtype='float32') / (1000 - 1)) - 0.5).reshape(1,1000,1)
-        f0_input = tf.reshape(tf.range(0,1,delta=(1/1000), dtype='float32'), (1,1000,1))
+        f0_input = ((np.arange(1000, dtype='float32') / (1000 - 1)) - 0.5).reshape(1,1000,1)
+        #f0_input = tf.reshape(tf.range(0,1,delta=(1/1000), dtype='float32'), (1,1000,1))
 
-        f0_latent = tf.math.add(f0_latent, f0_input)
-        f0 = self.f0_cppn(f0_latent) # (1, 1000, 1)
+        ###f0_latent = tf.math.add(f0_latent, f0_input)
+        f0 = self.f0_cppn(f0_input) # (1, 1000, 1)
 
         #ld = self.ld_cppn(np.ones(1000).reshape(1,1000,1) * .7)
         #ld_input = ((np.arange(1000, dtype='float32') / (1000 - 1)) - 0.5).reshape(1,1000,1)
         ld_input = tf.reshape(tf.range(0,1,delta=(1/1000), dtype='float32'), (1,1000,1))
-        ld_latent = tf.math.add(ld_latent, ld_input)
-        ld = self.ld_cppn(ld_latent)
+        ###ld_latent = tf.math.add(ld_latent, ld_input)
+        ld = self.ld_cppn(ld_input)
 
         #ldf0 = tf.convert_to_tensor(np.float32(np.concatenate([f0,ld])))
         ldf0 = tf.concat((f0,ld), axis=0)
@@ -116,17 +116,21 @@ class LatentGenerator(tf.keras.layers.Layer):
         return generator
 
     def build_f0_cppn(self, n_nodes = 100, n_hidden = 2, activation = 'relu'):
-        ''' Sequential MLP, takes 1 input, returns 1 output '''
-        cppn = Sequential()
-        cppn.add(Dense(10, input_shape=(None,1), dtype='float32', activation = 'relu'))
-        cppn.add(Dense(10, dtype='float32', activation = 'relu'))
-        cppn.add(Dense(10, dtype='float32', activation = 'relu'))
-        cppn.add(Dense(1, dtype='float32', activation='sigmoid'))
+        ''' MLP, takes 1 input, returns 1 output '''
+        input = Input(shape=(None,1), dtype='float32')
+        x = Dense(n_nodes, activation = activation, name = "f0_cppn_input")(input)
+
+        for i in range(n_hidden-1):
+            x = Dense(n_nodes, activation = activation, name = "f0_cppn_dense_%04d" % i)(x)
+
+        out = Dense(1, activation='sigmoid', name = "f0_cppn_output")(x)
+
+        cppn = Model(input, out)
 
         return cppn
 
     def build_ld_cppn(self, n_nodes = 100, n_hidden = 2, activation = 'relu'):
-        ''' Sequential MLP, takes 1 input, returns 1 output '''
+        ''' MLP, takes 1 input, returns 1 output '''
         input = Input(shape=(None,1), dtype='float32')
         x = Dense(n_nodes, activation = activation, name = "ld_cppn_input")(input)
 
