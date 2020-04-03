@@ -1,15 +1,24 @@
 from core.utils import *
-from .discriminator import binary_crossentropy
+from .discriminator import binary_crossentropy, Discriminator
+from .generator import Generator
 
 class GAN(ddsp.training.models.Model):
-    def __init__(self, gen, disc, losses=[binary_crossentropy()]):
-        super().__init__(name='gan_model', losses=losses)
-        self.gen = gen
-        self.disc = disc
 
-    def call(self, inputs, batch_size=8): #inputs are NONE
+    DEFAULT_ARGS = {
+        'gen_latent_dim': 100,
+        'batch_size': 8,
+        'losses': [binary_crossentropy()],
+    }
+
+    def __init__(self, **kwargs):
+        self.params = merge(self.DEFAULT_ARGS, kwargs)
+        super().__init__(name='gan_model', losses=self.params["losses"])
+        self.gen = Generator(latent_dim=self.params["gen_latent_dim"])
+        self.disc = Discriminator(batch_size=self.params["batch_size"])
+
+    def call(self, inputs): #inputs are NONE
         # label and training param don't matter here - we add our own label and loss
-        generated = self.gen.generate_batch(batch_size=batch_size)
+        generated = self.gen.generate_batch(batch_size=self.params["batch_size"])
         classification = self.disc(generated)
         label = tf.convert_to_tensor([1]) #trying to trick the frozen discriminator
         self.add_losses(label, classification)
