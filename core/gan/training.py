@@ -45,37 +45,45 @@ def train_gan(gan_model,
               opt,
               combined_iter,
               batch_size=8,
-              iters=1,
-              disc_iters = 1,
-              gen_iters = 1,
-              model_dir = ""):
-    # TODO: load losses and weights if they exist
-    losses_df = pd.DataFrame({"disc": [], "gen": []})
+              total_iters=1,
+              disc_iters=1,
+              gen_iters=1,
+              model_dir=None):
+    # load losses and weights if they exist
+    if model_dir:
+        if not maybe_make_dir(model_dir):
+            losses_df = pd.read_csv(model_dir + "losses.csv")
+        else:
+            losses_df = pd.DataFrame({"disc": [], "gen": []})
 
     # main loop
-    for i in range(iters):
+    for i in range(len(losses_df), len(losses_df) + total_iters):
         logging.info("----- GAN Step " + str(i) + " -----")
         train_discriminator(gan_model.disc, opt, combined_iter, iters=disc_iters)
         train_generator(gan_model,opt,iters=gen_iters,batch_size=batch_size)
-        gan_checkpoint(model_dir, gan_model, iter, losses_dict, audio_period=1, loss_period=10)
+        if model_dir:
+            gan_checkpoint(model_dir, gan_model, i, losses_df)
 
 def gan_checkpoint(model_dir,
                    gan_model,
-                   iter,
+                   i,
                    losses_df,
                    audio_period=1,
-                   loss_period=10):
+                   loss_period=1):
     # always save losses to dataframe
-    losses_df.append({
-        "disc" : str(tf.reduce_sum(gan_model.disc.losses).numpy()),
-        "gen" : str(tf.reduce_sum(gan_model.gen.losses).numpy()))
-    }, ignore_index=True)
+    losses_df = losses_df.append(
+        {
+            "disc" : str(tf.reduce_sum(gan_model.disc.losses).numpy()),
+            "gen" : str(tf.reduce_sum(gan_model.losses).numpy())
+        },
+        ignore_index=True
+    )
 
     # save audio
-    if (kwargs['iter'] % audio_period) == 0:
-        audio_path = model_dir + "chkpt-iter-" + str(iter) + ".wav"
+    if (i % audio_period) == 0:
+        audio_path = model_dir + "chkpt-iter-" + str(i) + ".wav"
         wavfile.write(audio_path, DEFAULT_SAMPLE_RATE, gan_model.gen.generate()['audio'].numpy())
 
     # save lists in file every so often
-    if (kwargs['iter'] % loss_period) == 0:
+    if (i % loss_period) == 0:
         losses_df.to_csv(model_dir + "losses.csv",index=False)

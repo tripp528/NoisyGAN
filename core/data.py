@@ -53,7 +53,8 @@ def combined_sample_iter(gen, data_provider, batch_size=8):
     i = -1
     while True:
         i+=1
-        logging.info("generating... batch "+str(i))
+        # logging.info("generating... batch "+str(i))
+        logging.info("generating...")
         generated = gen.generate_batch(label=0,batch_size=half_batch)
         real = next(iter(data_provider.get_batch(half_batch, shuffle=True, repeats=-1)))
         batch = {}
@@ -78,7 +79,7 @@ def fake_sample_iter(gen, batch_size=8):
     i = -1
     while True:
         i+=1
-        logging.info("generating... batch "+str(i))
+        logging.info("generating...")
         generated = gen.generate_batch(label=0,batch_size=batch_size)
         batch = {}
         for key in shapes:

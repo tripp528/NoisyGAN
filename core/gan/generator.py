@@ -37,14 +37,14 @@ class LatentGenerator(tf.keras.layers.Layer):
                  latent_dim=100,
                  output_splits=(('f0_scaled', 1),
                                 ('ld_scaled', 1),
-                                ('z', 8)),
+                                ('z', 6)),
                  name="LatentGenerator"):
         super().__init__(name=name)
         self.latent_dim = latent_dim
 
         #define layers
-        self.f0_cppn = self.build_f0_cppn(n_nodes = 100, n_hidden = 2, activation = 'relu')
-        self.ld_cppn = self.build_ld_cppn(n_nodes = 100, n_hidden = 2, activation = 'relu')
+        # self.f0_cppn = self.build_f0_cppn(n_nodes = 100, n_hidden = 2, activation = 'relu')
+        # self.ld_cppn = self.build_ld_cppn(n_nodes = 100, n_hidden = 2, activation = 'relu')
         self.upsampler = self.build_z_upsampler()
 
         self.output_splits = output_splits
@@ -56,7 +56,7 @@ class LatentGenerator(tf.keras.layers.Layer):
         upsampled_z = self.upsampler(latent)        # (1, 8, 1000, 1)
         upsampled_z = tf.squeeze(upsampled_z,axis=0)# (8, 1000, 1)
 
-        # test messing with f0 and ld
+        """# test messing with f0 and ld
         f0 = self.f0_cppn(((np.arange(1000) / (1000 - 1)) - 0.5).reshape(1,1000,1)) # (1, 1000, 1)
 
         #ld = self.ld_cppn(np.ones(1000).reshape(1,1000,1) * .7)
@@ -64,7 +64,9 @@ class LatentGenerator(tf.keras.layers.Layer):
 
         ldf0 = tf.convert_to_tensor(np.float32(np.concatenate([f0,ld])))
         upsampled = tf.concat((ldf0, upsampled_z),axis=0)
-        x = tf.transpose(upsampled)                 # (1, 1000, 10)
+        x = tf.transpose(upsampled)                 # (1, 1000, 10)"""
+
+        x = tf.transpose(upsampled_z)
 
         # convert to dictionary
         outputs = ddsp.training.nn.split_to_dict(x, self.output_splits)
@@ -107,7 +109,7 @@ class LatentGenerator(tf.keras.layers.Layer):
     def build_f0_cppn(self, n_nodes = 100, n_hidden = 2, activation = 'relu'):
         ''' Sequential MLP, takes 1 input, returns 1 output '''
         cppn = Sequential()
-        cppn.add(Dense(n_nodes, input_dim=1, dtype='float32', activation=activation))
+        cppn.add(Dense(n_nodes, input_dim=1000, dtype='float32', activation=activation))
 
         # Add ddense layers
         for i in range(n_hidden):
@@ -120,7 +122,7 @@ class LatentGenerator(tf.keras.layers.Layer):
     def build_ld_cppn(self, n_nodes = 100, n_hidden = 2, activation = 'relu'):
         ''' Sequential MLP, takes 1 input, returns 1 output '''
         cppn = Sequential()
-        cppn.add(Dense(n_nodes, input_dim=1, dtype='float32', activation=activation))
+        cppn.add(Dense(n_nodes, input_dim=1000, dtype='float32', activation=activation))
 
         # Add ddense layers
         for i in range(n_hidden):
@@ -129,10 +131,6 @@ class LatentGenerator(tf.keras.layers.Layer):
         cppn.add(Dense(1, activation='sigmoid'))
 
         return cppn
-
-
-
-
 
 class Generator(tf.keras.layers.Layer):
     def __init__(self,name='generator',latent_dim=100):

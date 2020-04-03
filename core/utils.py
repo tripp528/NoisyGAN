@@ -82,6 +82,10 @@ def find_model_dir(dir_name):
     # no model dir
     return dir_name, False
 
+def maybe_make_dir(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+        return True
 
 def buildTFRecords(audio_input, output_tfrecord_path):
     logging.info("Building TFRecords")
