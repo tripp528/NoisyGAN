@@ -37,13 +37,13 @@ class LatentGenerator(tf.keras.layers.Layer):
                  latent_dim=100,
                  output_splits=(('f0_scaled', 1),
                                 ('ld_scaled', 1),
-                                ('z', 6)),
+                                ('z', 8)),
                  name="LatentGenerator"):
         super().__init__(name=name)
         self.latent_dim = latent_dim
 
         #define layers
-        self.upsampler = self.buildUpsampler()
+        self.upsampler = self.build_z_upsampler()
 
         self.output_splits = output_splits
         self.n_out = sum([v[1] for v in output_splits])
@@ -51,9 +51,15 @@ class LatentGenerator(tf.keras.layers.Layer):
     def call(self,inputs):
         """Generates outputs with dictionary of f0_scaled and ld_scaled."""
         latent = self.generate_latent_point()       # (1, 100) ( ish )
-        upsampled = self.upsampler(latent)          # (1, 8, 1000, 1)
-        upsampled = tf.squeeze(upsampled,axis=0)    # (8, 1000, 1)
-        x = tf.transpose(upsampled)                 # (1, 1000, 8)
+        upsampled_z = self.upsampler(latent)        # (1, 8, 1000, 1)
+        upsampled_z = tf.squeeze(upsampled_z,axis=0)# (8, 1000, 1)
+
+        # test messing with f0 and ld
+        f0 = ((np.arange(1000) / (1000 - 1)) - 0.5).reshape(1,1000,1) # (1, 1000, 1)
+        ld = np.ones(1000).reshape(1,1000,1) * .7
+        ldf0 = tf.convert_to_tensor(np.float32(np.concatenate([f0,ld])))
+        upsampled = tf.concat((ldf0, upsampled_z),axis=0)
+        x = tf.transpose(upsampled)                 # (1, 1000, 10)
 
         # convert to dictionary
         outputs = ddsp.training.nn.split_to_dict(x, self.output_splits)
@@ -62,11 +68,12 @@ class LatentGenerator(tf.keras.layers.Layer):
     def generate_latent_point(self):
         # generate points in the latent space
         latent = np.random.randn(self.latent_dim)
-        # reshape into a batch of inputs for the network
         latent = latent.reshape(1, self.latent_dim)
+        # lt = (np.arange(self.latent_dim) / (self.latent_dim - 1)) - 0.5
+        # latent = lt.reshape(1, self.latent_dim)
         return tf.convert_to_tensor(latent)
 
-    def buildUpsampler(self):
+    def build_z_upsampler(self):
         # define the generator model
         generator = Sequential()
         # foundation for 1 x 125 signal
@@ -90,7 +97,6 @@ class LatentGenerator(tf.keras.layers.Layer):
         generator.add(LeakyReLU(alpha=0.2))
         generator.add(Conv2D(1, (3,3), activation='sigmoid', padding='same'))
 
-#         generator.summary()
         return generator
 
 
@@ -105,9 +111,9 @@ class Generator(tf.keras.layers.Layer):
         self.processor_group = self.buildProcessorGroup()
 
         # build the model and display summary
-        self.call(None)
-        self.build(None)
-        self.showSummery()
+        # self.call(None)
+        # self.build(None)
+        # self.showSummery()
 
     def generate(self,label=0):
         """returns {
