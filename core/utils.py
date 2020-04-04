@@ -82,6 +82,9 @@ def find_model_dir(dir_name):
     # no model dir
     return dir_name, False
 
+def maybe_make_dir(dir):
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
 def buildTFRecords(audio_input, output_tfrecord_path):
     logging.info("Building TFRecords")
@@ -100,3 +103,14 @@ def buildTFRecords(audio_input, output_tfrecord_path):
         output_tfrecord_path,
         num_shards=10,
         pipeline_options='--runner=DirectRunner')
+
+def merge(a, b, path=None):
+    "merges b into a"
+    if path is None:
+        path = []
+    for key in b:
+        if (key in a) and (isinstance(a[key], dict) and isinstance(b[key], dict)):
+            merge(a[key], b[key], path + [str(key)])
+        else:
+            a[key] = b[key]
+    return a
