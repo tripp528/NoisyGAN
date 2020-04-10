@@ -39,7 +39,7 @@ def train_generator(gan_model, opt, iters=1):
 
         logging.info("Gen Loss: " + str(total_loss.numpy()))
 
-def train_gan(gan_model, opt, combined_iter, **kwargs):
+def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
     DEFAULT_ARGS = {
         "model_dir": None,
         "total_iters": 1,
@@ -79,8 +79,8 @@ def train_gan(gan_model, opt, combined_iter, **kwargs):
     # main loop
     for i in range(len(losses_df), len(losses_df) + kwargs["total_iters"]):
         logging.info("----- GAN Step " + str(i) + " -----")
-        train_discriminator(gan_model.disc, opt, combined_iter, iters=kwargs["disc_iters"])
-        train_generator(gan_model,opt,iters=kwargs["gen_iters"])
+        train_discriminator(gan_model.disc, disc_opt, combined_iter, iters=kwargs["disc_iters"])
+        train_generator(gan_model,gen_opt,iters=kwargs["gen_iters"])
         if model_dir:
             gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs)
 

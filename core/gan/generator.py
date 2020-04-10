@@ -67,7 +67,7 @@ class LatentGenerator(tf.keras.layers.Layer):
         "f0_hidden_activation": 'tanh',
         "f0_t_scale": 0.5,
         "f0_z_scale": 0.1,
-        "f0_second_sig": True,
+        "f0_second_sig": False,
         "f0_n_nodes":5,
         "f0_n_hidden":3,
 
