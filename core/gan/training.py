@@ -18,7 +18,7 @@ def train_discriminator(disc, opt, dataset_iter, iters=1):
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
         opt.apply_gradients(zip(grads, disc.trainable_variables))
 
-        logging.info("Disc Loss: " + str(total_loss.numpy()))
+        # logging.info("Disc Loss: " + str(total_loss.numpy()))
 
 
 def train_generator(gan_model, opt, iters=1):
@@ -37,7 +37,7 @@ def train_generator(gan_model, opt, iters=1):
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
         opt.apply_gradients(zip(grads, gan_model.trainable_variables))
 
-        logging.info("Gen Loss: " + str(total_loss.numpy()))
+        # logging.info("Gen Loss: " + str(total_loss.numpy()))
 
 def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
     DEFAULT_ARGS = {
@@ -89,7 +89,7 @@ def gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs):
     # always append losses to dataframe
     disc_loss = str(tf.reduce_sum(gan_model.disc.losses).numpy())
     gen_loss = str(tf.reduce_sum(gan_model.losses).numpy())
-    # logging.info("Disc loss: " + disc_loss + "Gen loss: " + gen_loss)
+    logging.info("Disc loss: " + disc_loss + "Gen loss: " + gen_loss)
     losses_df = losses_df.append({"disc":disc_loss, "gen":gen_loss}, ignore_index=True)
 
     # save audio
@@ -101,6 +101,7 @@ def gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs):
 
     # export dataframe to csv every so often
     if (i % kwargs["loss_period"]) == 0:
+        logging.info(len(losses_df))
         losses_df.to_csv(model_dir + "losses.csv",index=False)
 
     # save weights
