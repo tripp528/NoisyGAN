@@ -5,7 +5,6 @@ from .generator import Generator
 class GAN(ddsp.training.models.Model):
 
     DEFAULT_ARGS = {
-        'gen_latent_dim': 100,
         'batch_size': 8,
         'losses': [binary_crossentropy()],
     }
@@ -13,7 +12,7 @@ class GAN(ddsp.training.models.Model):
     def __init__(self, **kwargs):
         self.params = merge(self.DEFAULT_ARGS, kwargs)
         super().__init__(name='gan_model', losses=self.params["losses"])
-        self.gen = Generator(latent_dim=self.params["gen_latent_dim"])
+        self.gen = Generator(**self.params)
         self.disc = Discriminator(batch_size=self.params["batch_size"])
 
     def call(self, inputs): #inputs are NONE

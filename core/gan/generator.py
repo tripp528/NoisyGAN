@@ -15,12 +15,13 @@ class CPPN_f0(Model):
                  activation = 'tanh',
                  t_scale=1,
                  z_scale=0.1,
-                 z_dim=16):
+                 latent_dim=16,
+                 second_sig=False):
 
         super().__init__()
         self.t_scale = t_scale
         self.z_scale = z_scale
-        self.z_dim = z_dim
+        self.latent_dim = latent_dim
 
         weight_init = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1, seed=None)
 #         weight_init = tf.keras.initializers.Ones()
@@ -31,7 +32,7 @@ class CPPN_f0(Model):
                          kernel_initializer=weight_init,
                          use_bias=False)
 
-        self.z_input = Dense(n_nodes, input_shape=(1000, self.z_dim))
+        self.z_input = Dense(n_nodes, input_shape=(1000, self.latent_dim))
 
         # fc model
         self.fc_model = Sequential()
@@ -42,10 +43,10 @@ class CPPN_f0(Model):
         self.fc_model.add(Dense(1, kernel_initializer=weight_init))
         self.fc_model.add(BatchNormalization())
         self.fc_model.add(Activation("sigmoid"))
-        self.fc_model.add(Activation("sigmoid"))
+        if second_sig: self.fc_model.add(Activation("sigmoid"))
 
     def call(self,inputs=None):
-        z = self.z_scale * tf.random.uniform((1, self.z_dim),minval=-1.0, maxval=1.0) # (1, z_dim)
+        z = self.z_scale * tf.random.uniform((1, self.latent_dim),minval=-1.0, maxval=1.0) # (1, latent_dim)
         z = tf.linalg.matmul(tf.ones((1000,1)), z) # (1000, zdim)
         Uz = self.z_input(z)
 
@@ -53,31 +54,61 @@ class CPPN_f0(Model):
         Ut = self.time_input(t)
 
         U = Ut + Uz
-        f0_scaled = self.fc_model(U)
-        return f0_scaled
+        return self.fc_model(U)
 
 class LatentGenerator(tf.keras.layers.Layer):
+
+    DEFAULT_ARGS = {
+        # z
+        "z_latent_dim": 100,
+
+        # f0
+        "f0_latent_dim": 8,
+        "f0_hidden_activation": 'tanh',
+        "f0_t_scale": 0.5,
+        "f0_z_scale": 0.1,
+        "f0_second_sig": True,
+        "f0_n_nodes":5,
+        "f0_n_hidden":3,
+
+        # ld
+        "ld_latent_dim": 8,
+        "ld_hidden_activation": 'tanh',
+        "ld_t_scale": 0.5,
+        "ld_z_scale": 0.1,
+        "ld_second_sig": True,
+        "ld_n_nodes":3,
+        "ld_n_hidden":1,
+
+    }
     # TODO: only does one at a time
-    def __init__(self,
-                 latent_dim=100,
-                 output_splits=(('f0_scaled', 1),
-                                ('ld_scaled', 1),
-                                ('z', 8)), # Changed from 8
-                 name="LatentGenerator"):
+    def __init__(self, name="LatentGenerator", **kwargs):
         super().__init__(name=name)
-        self.latent_dim = latent_dim
+        self.params = merge(self.DEFAULT_ARGS, kwargs)
+        self.output_splits = (('f0_scaled', 1),('ld_scaled', 1),('z', 8))
 
         #define layers
-        self.f0_cppn = CPPN_f0(n_nodes = 32, n_hidden = 3, t_scale=1, z_scale=1, z_dim=8, activation="tanh")
-        self.ld_cppn = CPPN_f0(n_nodes = 32, n_hidden = 3, t_scale=1, z_scale=1, z_dim=8, activation="tanh")
-        self.z_upsampler = self.build_z_upsampler()
+        self.f0_cppn = CPPN_f0(n_nodes=self.params["f0_n_nodes"],
+                               n_hidden=self.params["f0_n_hidden"],
+                               t_scale=self.params["f0_t_scale"],
+                               z_scale=self.params["f0_z_scale"],
+                               latent_dim=self.params["f0_latent_dim"],
+                               activation=self.params["f0_hidden_activation"],
+                               second_sig=self.params["ld_second_sig"])
 
-        self.output_splits = output_splits
-        self.n_out = sum([v[1] for v in output_splits])
+        self.ld_cppn = CPPN_f0(n_nodes=self.params["ld_n_nodes"],
+                               n_hidden=self.params["ld_n_hidden"],
+                               t_scale=self.params["ld_t_scale"],
+                               z_scale=self.params["ld_z_scale"],
+                               latent_dim=self.params["ld_latent_dim"],
+                               activation=self.params["ld_hidden_activation"],
+                               second_sig=self.params["ld_second_sig"])
+
+        self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["z_latent_dim"])
 
     def call(self,inputs):
         """Generates outputs with dictionary of f0_scaled and ld_scaled."""
-        z = tf.random.normal((1,self.latent_dim)) # (1, 100ish)
+        z = tf.random.normal((1,self.params["z_latent_dim"])) # (1, 100ish)
         z = self.z_upsampler(z) # (1, 8, 1000, 1)
         z = tf.squeeze(z,axis=0)# (8, 1000, 1)
 
@@ -93,12 +124,12 @@ class LatentGenerator(tf.keras.layers.Layer):
         outputs = ddsp.training.nn.split_to_dict(flz, self.output_splits)
         return outputs
 
-    def build_z_upsampler(self):
+    def build_z_upsampler(self, latent_dim):
         # define the generator model
         generator = Sequential()
         # foundation for 1 x 125 signal
         n_nodes = 125 * 1 * 16
-        generator.add(Dense(n_nodes, input_dim=self.latent_dim, dtype='float32'))
+        generator.add(Dense(n_nodes, input_dim=latent_dim, dtype='float32'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         generator.add(Reshape((1, 125, 16)))
@@ -142,27 +173,30 @@ class UnPreprocessor(ddsp.training.preprocessing.Preprocessor):
         return features
 
 class Generator(tf.keras.layers.Layer):
-    def __init__(self,name='generator',latent_dim=100):
-        super().__init__(name=name) #add Generator??
-        self.latent_dim = latent_dim
 
-        self.latent_generator = LatentGenerator(latent_dim=latent_dim)
-        self.unprocessor = self.buildUnprocessor()
+    def __init__(self,name='generator',**kwargs):
+        super().__init__(name=name)
+
+        self.latent_generator = LatentGenerator(**kwargs)
+        self.unprocessor = UnPreprocessor(time_steps=1000)
         self.decoder = self.buildDecoder()
         self.processor_group = self.buildProcessorGroup()
 
-        # build the model and display summary
-        # self.call(None)
-        # self.build(None)
-        # self.showSummery()
+    def call(self,inputs, label=0):
+        generated = self.latent_generator(None) # no inputs. generating
+        un_processed = self.unprocessor(generated)
+        decoded = self.decoder(un_processed)
+        sample = decoded
+        sample['audio'] = self.processor_group(decoded)
+        return sample
 
     def generate(self,label=0):
-        """returns {
+        """
             audio: (64000,)
             f0_hz: (1000,)
             loudness_db: (1000,)
             label: (1,)
-        }"""
+        """
         sample = self.call(None)
         squeezedSample = {}
         useKeys = ["audio","f0_hz","loudness_db"]
@@ -172,12 +206,12 @@ class Generator(tf.keras.layers.Layer):
         return squeezedSample
 
     def generate_batch(self, label=0, batch_size=8):
-        """returns {
+        """
             "audio": (batch_size, 64000),
             "f0_hz": (batch_size, 1000),
             "loudness_db": (batch_size, 1000)
             "label": (batch_size, 1)
-        }"""
+        """
         samples = {"audio":[], "f0_hz": [], "loudness_db": [], "label": []}
         for i in range(batch_size):
             sample = self.generate(label=label)
@@ -188,19 +222,6 @@ class Generator(tf.keras.layers.Layer):
             samples[key] = tf.convert_to_tensor(samples[key])
 
         return samples
-
-    def call(self,inputs, label=0):
-        generated = self.latent_generator(None) # no inputs. generating
-        un_processed = self.unprocessor(generated)
-        decoded = self.decoder(un_processed)
-        sample = decoded
-        sample['audio'] = self.processor_group(decoded)
-        return sample
-
-    def buildUnprocessor(self):
-        # Default preprocessor that resamples features and adds `f0_hz` key.
-        unprocessor = UnPreprocessor(time_steps=1000)
-        return unprocessor
 
     def buildDecoder(self):
         # rnn decoder .. TODO: figure out what this is!!
@@ -215,10 +236,9 @@ class Generator(tf.keras.layers.Layer):
         return decoder
 
     def buildProcessorGroup(self):
-        """ Create actual synth structure (highly customizable)
-        Defaults to n_samples and sample_rate defined in my_ddsp_utils
         """
-        # Create Processors.
+            Create actual synth structure (highly customizable)
+        """
         additive = ddsp.synths.Additive(n_samples=DEFAULT_N_SAMPLES,
                                         sample_rate=DEFAULT_SAMPLE_RATE, # this is defined in my_ddsp_utils
                                         name='additive')
