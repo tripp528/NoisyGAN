@@ -91,6 +91,7 @@ def gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs):
     gen_loss = str(tf.reduce_sum(gan_model.losses).numpy())
     logging.info("Disc loss: " + disc_loss + "Gen loss: " + gen_loss)
     losses_df = losses_df.append({"disc":disc_loss, "gen":gen_loss}, ignore_index=True)
+    logging.info(losses_df)
 
     # save audio
     if (i % kwargs["audio_period"]) == 0:
@@ -101,7 +102,6 @@ def gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs):
 
     # export dataframe to csv every so often
     if (i % kwargs["loss_period"]) == 0:
-        logging.info(len(losses_df))
         losses_df.to_csv(model_dir + "losses.csv",index=False)
 
     # save weights
