@@ -18,8 +18,7 @@ def train_discriminator(disc, opt, dataset_iter, iters=1):
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
         opt.apply_gradients(zip(grads, disc.trainable_variables))
 
-        # logging.info("Disc Loss: " + str(total_loss.numpy()))
-        # outfile.write(str(total_loss.numpy()) + '\n')
+        logging.info("Disc Loss: " + str(total_loss.numpy()))
 
 
 def train_generator(gan_model, opt, iters=1):
@@ -38,8 +37,7 @@ def train_generator(gan_model, opt, iters=1):
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
         opt.apply_gradients(zip(grads, gan_model.trainable_variables))
 
-        # logging.info("Gen Loss: " + str(total_loss.numpy()))
-        # outfile.write(str(total_loss.numpy()) + '\n')
+        logging.info("Gen Loss: " + str(total_loss.numpy()))
 
 def train_gan(gan_model, opt, combined_iter, **kwargs):
     DEFAULT_ARGS = {
@@ -74,6 +72,10 @@ def train_gan(gan_model, opt, combined_iter, **kwargs):
         # make dir for audio samples
         maybe_make_dir(model_dir + 'samples/')
 
+    else:
+        # model_dir not specified
+        losses_df = pd.DataFrame({"disc": [], "gen": []})
+
     # main loop
     for i in range(len(losses_df), len(losses_df) + kwargs["total_iters"]):
         logging.info("----- GAN Step " + str(i) + " -----")
@@ -87,7 +89,7 @@ def gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs):
     # always append losses to dataframe
     disc_loss = str(tf.reduce_sum(gan_model.disc.losses).numpy())
     gen_loss = str(tf.reduce_sum(gan_model.losses).numpy())
-    logging.info("Disc loss: " + disc_loss + "Gen loss: " + gen_loss)
+    # logging.info("Disc loss: " + disc_loss + "Gen loss: " + gen_loss)
     losses_df = losses_df.append({"disc":disc_loss, "gen":gen_loss}, ignore_index=True)
 
     # save audio
