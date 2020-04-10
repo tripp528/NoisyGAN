@@ -94,8 +94,10 @@ def gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs):
 
     # save audio
     if (i % kwargs["audio_period"]) == 0:
+        sample = gan_model.gen.generate()['audio'].numpy()
+        play(sample)
         audio_path = model_dir + "samples/" + "chkpt-iter-" + str(i) + ".wav"
-        wavfile.write(audio_path, DEFAULT_SAMPLE_RATE, gan_model.gen.generate()['audio'].numpy())
+        wavfile.write(audio_path, DEFAULT_SAMPLE_RATE, sample)
 
     # export dataframe to csv every so often
     if (i % kwargs["loss_period"]) == 0:
