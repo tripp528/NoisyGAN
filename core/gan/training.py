@@ -90,7 +90,7 @@ def gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs):
     disc_loss = str(tf.reduce_sum(gan_model.disc.losses).numpy())
     gen_loss = str(tf.reduce_sum(gan_model.losses).numpy())
     logging.info("Disc loss: " + disc_loss + "Gen loss: " + gen_loss)
-    losses_df = losses_df.append({"disc":disc_loss, "gen":gen_loss}, ignore_index=True)
+    losses_df.loc[i] = {"disc":disc_loss, "gen":gen_loss}
     logging.info(losses_df)
 
     # save audio
