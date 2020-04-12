@@ -1,11 +1,10 @@
 # local imports
 from .utils import *
 
-class FromTFRecords(ddsp.training.data.TFRecordProvider):
+class FromTFRecords(ddsp.training.data.TFRecordProvider, DataProvMixin):
     """ class for getting dataset from tfrecords (for GAN) """
-    def __init__(self,filepattern,label=1):
+    def __init__(self,filepattern):
         super().__init__(filepattern)
-        self.label = label
 
     def get_dataset(self, shuffle=True):
         def parse_tfexample(record):
@@ -24,22 +23,27 @@ class FromTFRecords(ddsp.training.data.TFRecordProvider):
         dataset = dataset.map(parse_tfexample, num_parallel_calls=ddsp.training.data._AUTOTUNE)
         return dataset
 
-    def getAudio(self,sampleNum=0):
-        samples = list(iter(self.get_dataset(shuffle=False)))
-        sample = samples[sampleNum]
-        audio = sample["audio"]
-        return audio
+class FromNSynth(ddsp.training.data.TfdsProvider, DataProvMixin):
+  def __init__(self,
+               name='nsynth/gansynth_subset.f0_and_loudness:2.3.0',
+               split='train',
+               data_dir='gs://tfds-data/datasets'):
+    if data_dir == 'gs://tfds-data/datasets':
+      logging.warning('If not on colab, this is very slow. Use data_dir param.')
+    super().__init__(name, split, data_dir)
 
-    def getSample(self,sampleNum=0):
-        samples = list(iter(self.get_dataset(shuffle=False)))
-        howmany = len(samples)
-        sample = samples[sampleNum % howmany]
-        # for key in sample.keys():
-        #     sample[key] = np.expand_dims(sample[key],axis=[0])
-        return sample
-
-    def get_n_samples(self):
-        return self.getAudio().shape[0]
+  def get_dataset(self, shuffle=True):
+    """Returns dataset with slight restructuring of feature dictionary."""
+    def preprocess_ex(ex):
+        return {
+            'audio': ex['audio'],
+            'f0_hz': ex['f0']['hz'],
+            'loudness_db': ex['loudness']['db'],
+            'label': tf.convert_to_tensor([1.0]),
+        }
+    dataset = super().get_dataset(shuffle)
+    dataset = dataset.map(preprocess_ex, num_parallel_calls=ddsp.training.data._AUTOTUNE)
+    return dataset
 
 # ------------------- iterator functions for GAN -------------------
 
