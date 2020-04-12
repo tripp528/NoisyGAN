@@ -1,7 +1,7 @@
 # local imports
 from .utils import *
 
-class FromTFRecords(ddsp.training.data.TFRecordProvider, DataProvMixin):
+class FromTFRecords(ddsp.training.data.TFRecordProvider):
     """ class for getting dataset from tfrecords (for GAN) """
     def __init__(self,filepattern):
         super().__init__(filepattern)
@@ -23,7 +23,7 @@ class FromTFRecords(ddsp.training.data.TFRecordProvider, DataProvMixin):
         dataset = dataset.map(parse_tfexample, num_parallel_calls=ddsp.training.data._AUTOTUNE)
         return dataset
 
-class FromNSynth(ddsp.training.data.TfdsProvider, DataProvMixin):
+class FromNSynth(ddsp.training.data.TfdsProvider):
   def __init__(self,
                name='nsynth/gansynth_subset.f0_and_loudness:2.3.0',
                split='train',
