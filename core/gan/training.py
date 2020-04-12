@@ -8,7 +8,7 @@ def train_discriminator(disc, opt, dataset_iter, iters=1):
     disc.trainable = True
 
     for i in range(iters): #TODO: shuffle batch around!
-        batch = next(dataset_iter)
+        batch = dataset_iter.getNext()
         # train_step
         grad_clip_norm = 3.0
         with tf.GradientTape() as tape:

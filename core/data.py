@@ -47,44 +47,25 @@ class FromNSynth(ddsp.training.data.TfdsProvider):
 
 # ------------------- iterator functions for GAN -------------------
 
-def combined_sample_iter(gen, data_provider, batch_size=8):
-    half_batch = int(batch_size/2)
-    shapes = {"f0_hz": (1000,),
-                    "loudness_db": (1000,),
-                    "audio": (64000,),
-                    "label": (1,)}
+class CombinedIter():
+    def __init__(self, gen, data_provider, batch_size=8, overfit=False):
+        self.batch_size = batch_size
+        self.half_batch = int(batch_size/2)
+        self.shapes = {"f0_hz": (1000,),
+                  "loudness_db": (1000,),
+                  "audio": (64000,),
+                  "label": (1,)}
+        if overfit:
+            self.dataset = data_provider.get_batch(self.half_batch, shuffle=False).take(self.half_batch).repeat()
+        else:
+            self.dataset = data_provider.get_batch(self.half_batch, shuffle=True)
+        self.gen = gen
 
-    i = -1
-    while True:
-        i+=1
-        # logging.info("generating... batch "+str(i))
-        generated = gen.generate_batch(label=0,batch_size=half_batch)
-        real = next(iter(data_provider.get_batch(half_batch, shuffle=True, repeats=-1)))
+    def getNext(self):
+        generated = self.gen.generate_batch(label=0,batch_size=self.half_batch)
+        real = next(iter(self.dataset))
         batch = {}
-        for key in shapes:
+        for key in self.shapes:
             batch[key] = tf.concat([generated[key],real[key]],axis=0)
 
-        yield batch
-
-def real_sample_iter(data_provider, batch_size=8):
-    i = -1
-    while True:
-        i+=1
-        real = next(iter(data_provider.get_batch(batch_size, shuffle=True, repeats=-1)))
-        yield real
-
-def fake_sample_iter(gen, batch_size=8):
-    shapes = {"f0_hz": (1000,),
-                    "loudness_db": (1000,),
-                    "audio": (64000,),
-                    "label": (1,)}
-
-    i = -1
-    while True:
-        i+=1
-        generated = gen.generate_batch(label=0,batch_size=batch_size)
-        batch = {}
-        for key in shapes:
-            batch[key] = generated[key]
-
-        yield batch
+        return batch
