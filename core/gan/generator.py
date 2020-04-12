@@ -1,7 +1,7 @@
 from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
                                     Flatten,Dense,Reshape,Conv2DTranspose,\
-                                    Input, Activation, BatchNormalization
+                                    Input, Activation, BatchNormalization, Layer
 
 from core.utils import *
 from ddsp.core import midi_to_hz
@@ -24,7 +24,7 @@ class CPPN_f0(Model):
         self.latent_dim = latent_dim
 
         weight_init = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1, seed=None)
-#         weight_init = tf.keras.initializers.Ones()
+        # weight_init = tf.keras.initializers.Ones()
 
         # input layers
         self.time_input = Dense(n_nodes,
@@ -56,7 +56,7 @@ class CPPN_f0(Model):
         U = Ut + Uz
         return self.fc_model(U)
 
-class LatentGenerator(tf.keras.layers.Layer):
+class LatentGenerator(Layer):
 
     DEFAULT_ARGS = {
         # z
@@ -172,7 +172,7 @@ class UnPreprocessor(ddsp.training.preprocessing.Preprocessor):
         features['loudness_db'] = (features['ld_scaled'] - 1) * LD_RANGE
         return features
 
-class Generator(tf.keras.layers.Layer):
+class Generator(Layer):
 
     def __init__(self,name='generator',**kwargs):
         super().__init__(name=name)

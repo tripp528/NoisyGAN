@@ -1,17 +1,19 @@
+from tensorflow.keras import Model
+from tensorflow.keras.losses import binary_crossentropy
+
 from core.utils import *
-from .discriminator import binary_crossentropy, Discriminator
+from .discriminator import Discriminator
 from .generator import Generator
 
-class GAN(ddsp.training.models.Model):
+class GAN(Model):
 
     DEFAULT_ARGS = {
-        'batch_size': 8,
-        'losses': [binary_crossentropy()],
+        'batch_size': 8
     }
 
     def __init__(self, **kwargs):
         self.params = merge(self.DEFAULT_ARGS, kwargs)
-        super().__init__(name='gan_model', losses=self.params["losses"])
+        super().__init__(name='gan_model')
         self.gen = Generator(**self.params)
         self.disc = Discriminator(batch_size=self.params["batch_size"])
 
@@ -20,6 +22,6 @@ class GAN(ddsp.training.models.Model):
         generated = self.gen.generate_batch(batch_size=self.params["batch_size"])
         classification = self.disc(generated)
         label = tf.convert_to_tensor([1]) #trying to trick the frozen discriminator
-        self.add_losses(label, classification)
+        self.add_loss(binary_crossentropy(label, classification))
 
         return classification

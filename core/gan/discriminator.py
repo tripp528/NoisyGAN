@@ -1,25 +1,19 @@
-from tensorflow.keras import Sequential
+from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
                                     Flatten,Dense,Reshape,Conv2DTranspose,InputLayer
 from tensorflow.keras.activations import sigmoid
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import binary_crossentropy
 
 from core.utils import *
 
-class binary_crossentropy(tf.keras.layers.Layer):
-    def __init__(self,name = "binary_crossentropy"):
-        super().__init__(name=name)
-
-    def call(self, target, output):
-        return tf.keras.losses.binary_crossentropy(target,output)
-
-class Discriminator(ddsp.training.models.Model):
+class Discriminator(Model):
     """for now, just re-encode the fake sample.
         in the future, just feed flz from fake right in
         TODO: subclass ddsp Model
     """
-    def __init__(self, losses=[binary_crossentropy()], batch_size=32):
-        super().__init__(name='discriminator', losses=losses)
+    def __init__(self, batch_size=32):
+        super().__init__(name='discriminator')
         self.batch_size = batch_size
         self.preprocessor = self.buildPreprocessor()
         self.flzEncoder = self.buildFLZEncoder()
@@ -40,12 +34,7 @@ class Discriminator(ddsp.training.models.Model):
 
         # classify if it's real or not
         classification = self.classifier(encoded_concat, training=training)
-
-        if training:
-            label = sample['label']
-            # print(label,classification)
-            self.add_losses(label, classification)
-
+        self.add_loss(binary_crossentropy(sample['label'],classification))
         return classification
 
     def buildPreprocessor(self):
