@@ -3,9 +3,8 @@ from .utils import *
 
 class FromTFRecords(ddsp.training.data.TFRecordProvider):
     """ class for getting dataset from tfrecords (for GAN) """
-    def __init__(self,filepattern,label=1):
+    def __init__(self,filepattern):
         super().__init__(filepattern)
-        self.label = label
 
     def get_dataset(self, shuffle=True):
         def parse_tfexample(record):
@@ -24,65 +23,48 @@ class FromTFRecords(ddsp.training.data.TFRecordProvider):
         dataset = dataset.map(parse_tfexample, num_parallel_calls=ddsp.training.data._AUTOTUNE)
         return dataset
 
-    def getAudio(self,sampleNum=0):
-        samples = list(iter(self.get_dataset(shuffle=False)))
-        sample = samples[sampleNum]
-        audio = sample["audio"]
-        return audio
+class FromNSynth(ddsp.training.data.TfdsProvider):
+  def __init__(self,
+               name='nsynth/gansynth_subset.f0_and_loudness:2.3.0',
+               split='train',
+               data_dir='gs://tfds-data/datasets'):
+    if data_dir == 'gs://tfds-data/datasets':
+      logging.warning('If not on colab, this is very slow. Use data_dir param.')
+    super().__init__(name, split, data_dir)
 
-    def getSample(self,sampleNum=0):
-        samples = list(iter(self.get_dataset(shuffle=False)))
-        howmany = len(samples)
-        sample = samples[sampleNum % howmany]
-        # for key in sample.keys():
-        #     sample[key] = np.expand_dims(sample[key],axis=[0])
-        return sample
-
-    def get_n_samples(self):
-        return self.getAudio().shape[0]
+  def get_dataset(self, shuffle=True):
+    """Returns dataset with slight restructuring of feature dictionary."""
+    def preprocess_ex(ex):
+        return {
+            'audio': ex['audio'],
+            'f0_hz': ex['f0']['hz'],
+            'loudness_db': ex['loudness']['db'],
+            'label': tf.convert_to_tensor([1.0]),
+        }
+    dataset = super().get_dataset(shuffle)
+    dataset = dataset.map(preprocess_ex, num_parallel_calls=ddsp.training.data._AUTOTUNE)
+    return dataset
 
 # ------------------- iterator functions for GAN -------------------
 
-def combined_sample_iter(gen, data_provider, batch_size=8):
-    half_batch = int(batch_size/2)
-    shapes = {"f0_hz": (1000,),
-                    "loudness_db": (1000,),
-                    "audio": (64000,),
-                    "label": (1,)}
+class CombinedIter():
+    def __init__(self, gen, data_provider, batch_size=8, overfit=False):
+        self.half_batch = int(batch_size/2)
+        self.shapes = {"f0_hz": (1000,),
+                  "loudness_db": (1000,),
+                  "audio": (64000,),
+                  "label": (1,)}
+        if overfit:
+            self.dataset = data_provider.get_batch(self.half_batch, shuffle=False).take(self.half_batch).repeat()
+        else:
+            self.dataset = data_provider.get_batch(self.half_batch, shuffle=True)
+        self.gen = gen
 
-    i = -1
-    while True:
-        i+=1
-        # logging.info("generating... batch "+str(i))
-        logging.info("generating...")
-        generated = gen.generate_batch(label=0,batch_size=half_batch)
-        real = next(iter(data_provider.get_batch(half_batch, shuffle=True, repeats=-1)))
+    def getNext(self):
+        generated = self.gen.generate_batch(label=0,batch_size=self.half_batch)
+        real = next(iter(self.dataset))
         batch = {}
-        for key in shapes:
+        for key in self.shapes:
             batch[key] = tf.concat([generated[key],real[key]],axis=0)
 
-        yield batch
-
-def real_sample_iter(data_provider, batch_size=8):
-    i = -1
-    while True:
-        i+=1
-        real = next(iter(data_provider.get_batch(batch_size, shuffle=True, repeats=-1)))
-        yield real
-
-def fake_sample_iter(gen, batch_size=8):
-    shapes = {"f0_hz": (1000,),
-                    "loudness_db": (1000,),
-                    "audio": (64000,),
-                    "label": (1,)}
-
-    i = -1
-    while True:
-        i+=1
-        logging.info("generating...")
-        generated = gen.generate_batch(label=0,batch_size=batch_size)
-        batch = {}
-        for key in shapes:
-            batch[key] = generated[key]
-
-        yield batch
+        return batch

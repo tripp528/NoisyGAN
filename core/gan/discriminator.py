@@ -1,31 +1,26 @@
-from tensorflow.keras import Sequential
+from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
                                     Flatten,Dense,Reshape,Conv2DTranspose,InputLayer
 from tensorflow.keras.activations import sigmoid
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.losses import binary_crossentropy, mean_squared_error
 
 from core.utils import *
 
-class binary_crossentropy(tf.keras.layers.Layer):
-    def __init__(self,name = "binary_crossentropy"):
-        super().__init__(name=name)
+class Discriminator(Model):
+    DEFAULT_ARGS = {
+        'batch_size': 8,
+        'loss': binary_crossentropy,
+    }
 
-    def call(self, target, output):
-        return tf.keras.losses.binary_crossentropy(target,output)
-
-class Discriminator(ddsp.training.models.Model):
-    """for now, just re-encode the fake sample.
-        in the future, just feed flz from fake right in
-        TODO: subclass ddsp Model
-    """
-    def __init__(self, losses=[binary_crossentropy()], batch_size=32):
-        super().__init__(name='discriminator', losses=losses)
-        self.batch_size = batch_size
+    def __init__(self, **kwargs):
+        super().__init__(name='discriminator')
+        self.params = merge(self.DEFAULT_ARGS, kwargs)
         self.preprocessor = self.buildPreprocessor()
         self.flzEncoder = self.buildFLZEncoder()
         self.classifier = self.buildClassifier()
 
-    def call(self, sample, training=True):
+    def call(self, sample, add_losses=True):
         # audio key must have shape (1,64000)
         preprocessed = self.preprocessor(sample)
 
@@ -39,13 +34,10 @@ class Discriminator(ddsp.training.models.Model):
         encoded_concat = tf.expand_dims(encoded_concat,axis=3)
 
         # classify if it's real or not
-        classification = self.classifier(encoded_concat, training=training)
+        classification = self.classifier(encoded_concat)
 
-        if training:
-            label = sample['label']
-            # print(label,classification)
-            self.add_losses(label, classification)
-
+        if add_losses:
+            self.add_loss(self.params["loss"](sample['label'],classification))
         return classification
 
     def buildPreprocessor(self):
@@ -57,11 +49,11 @@ class Discriminator(ddsp.training.models.Model):
                                                                        z_time_steps=1000)
         return encoder
 
-    def buildClassifier(self,training=True):
+    def buildClassifier(self):
         #TODO
         # now encode even further down to a binary classification real or fake
         discriminator = Sequential()
-        discriminator.add(InputLayer(((1000,8,1)), batch_size=self.batch_size))
+        discriminator.add(InputLayer(((1000,8,1)), batch_size=self.params["batch_size"]))
         # downsample to 500x3
         discriminator.add(Conv2D(16, (3,3), strides=(2, 2), padding='same'))
         discriminator.add(BatchNormalization())
