@@ -33,7 +33,7 @@ def train_gen(gan_model, opt, iters=1):
         with tf.GradientTape() as tape:
             pred = gan_model(None)
 
-            logging.info(type(gan_model.losses))
+            # logging.info(type(gan_model.losses))
 
             total_loss = tf.reduce_sum(gan_model.losses)
         grads = tape.gradient(total_loss, gan_model.trainable_variables)
@@ -71,6 +71,7 @@ def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
         maybe_make_dir(model_dir + "weights/")
         if os.listdir(model_dir + "weights/"):
             latest_checkpoint = tf.train.latest_checkpoint(model_dir + "weights/")
+            logging.info("Loading weights from " + str(latest_checkpoint))
             gan_model.load_weights(latest_checkpoint)
 
         # make dir for audio samples
