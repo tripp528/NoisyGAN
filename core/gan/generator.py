@@ -45,8 +45,9 @@ class CPPN_f0(Model):
         self.fc_model.add(Activation("sigmoid"))
         if second_sig: self.fc_model.add(Activation("sigmoid"))
 
-    def call(self,inputs=None):
-        z = self.z_scale * tf.random.uniform((1, self.latent_dim),minval=-1.0, maxval=1.0) # (1, latent_dim)
+    def call(self,latent):
+        # z = self.z_scale * tf.random.uniform((1, self.latent_dim),minval=-1.0, maxval=1.0) # (1, latent_dim)
+        z = self.z_scale * latent # (1, latent_dim)
         z = tf.linalg.matmul(tf.ones((1000,1)), z) # (1000, zdim)
         Uz = self.z_input(z)
 
@@ -85,42 +86,43 @@ class LatentGenerator(Layer):
     def __init__(self, name="LatentGenerator", **kwargs):
         super().__init__(name=name)
         self.params = merge(self.DEFAULT_ARGS, kwargs)
-        self.output_splits = (('f0_scaled', 1),('ld_scaled', 1),('z', 6))
+        self.output_splits = (('f0_scaled', 1),('ld_scaled', 1),('z', 8))
 
         #define layers
-        # self.f0_cppn = CPPN_f0(n_nodes=self.params["f0_n_nodes"],
-        #                        n_hidden=self.params["f0_n_hidden"],
-        #                        t_scale=self.params["f0_t_scale"],
-        #                        z_scale=self.params["f0_z_scale"],
-        #                        latent_dim=self.params["f0_latent_dim"],
-        #                        activation=self.params["f0_hidden_activation"],
-        #                        second_sig=self.params["ld_second_sig"])
-        #
-        # self.ld_cppn = CPPN_f0(n_nodes=self.params["ld_n_nodes"],
-        #                        n_hidden=self.params["ld_n_hidden"],
-        #                        t_scale=self.params["ld_t_scale"],
-        #                        z_scale=self.params["ld_z_scale"],
-        #                        latent_dim=self.params["ld_latent_dim"],
-        #                        activation=self.params["ld_hidden_activation"],
-        #                        second_sig=self.params["ld_second_sig"])
+        self.f0_cppn = CPPN_f0(n_nodes=self.params["f0_n_nodes"],
+                               n_hidden=self.params["f0_n_hidden"],
+                               t_scale=self.params["f0_t_scale"],
+                               z_scale=self.params["f0_z_scale"],
+
+                               latent_dim=self.params["z_latent_dim"],
+
+                               activation=self.params["f0_hidden_activation"],
+                               second_sig=self.params["ld_second_sig"])
+
+        self.ld_cppn = CPPN_f0(n_nodes=self.params["ld_n_nodes"],
+                               n_hidden=self.params["ld_n_hidden"],
+                               t_scale=self.params["ld_t_scale"],
+                               z_scale=self.params["ld_z_scale"],
+
+                               latent_dim=self.params["z_latent_dim"],
+
+                               activation=self.params["ld_hidden_activation"],
+                               second_sig=self.params["ld_second_sig"])
 
         self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["z_latent_dim"])
 
     def call(self,inputs):
         """Generates outputs with dictionary of f0_scaled and ld_scaled."""
-        z = tf.random.normal((1,self.params["z_latent_dim"])) # (1, 100ish)
-        z = self.z_upsampler(z) # (1, 8, 1000, 1)
+        latent = tf.random.normal((1,self.params["z_latent_dim"])) # (1, 100ish)
+        z = self.z_upsampler(latent) # (1, 8, 1000, 1)
         z = tf.squeeze(z,axis=0)# (8, 1000, 1)
 
-        # f0 = self.f0_cppn(None)
-        # ld = self.ld_cppn(None)
-        # flz = tf.concat((f0,ld,z), axis=0)
-
-        flz = z # (1, 1000, 8)
-
-        flz = tf.transpose(flz)# (1, 1000, 10)
+        f0 = self.f0_cppn(latent)# (1, 1000, 1)
+        ld = self.ld_cppn(latent)# (1, 1000, 1)
+        flz = tf.concat((f0,ld,z), axis=0)# (10, 1000, 1)
 
         # convert to dictionary
+        flz = tf.transpose(flz) # (1, 1000, 10)
         outputs = ddsp.training.nn.split_to_dict(flz, self.output_splits)
         return outputs
 
