@@ -3,17 +3,16 @@ from core.utils import *
 from scipy.io import wavfile
 import pandas as pd
 
-def train_disc(gan_model, opt, dataset_iter, iters=1):
+def train_disc(gan_model, opt, dataset_iter, iters=1, grad_clip_norm=3.0):
     # unfreeze weights
     gan_model.disc.trainable = True
 
     for i in range(iters): #TODO: shuffle batch around!
         batch = dataset_iter.getNext()
         # train_step
-        grad_clip_norm = 3.0
         with tf.GradientTape() as tape:
             pred = gan_model.disc(batch,add_losses=True)
-            logging.info("disc_losses: " + str(gan_model.disc.losses))
+            logging.debug("disc_losses: " + str(gan_model.disc.losses))
             total_loss = tf.reduce_sum(gan_model.disc.losses)
         grads = tape.gradient(total_loss, gan_model.disc.trainable_variables)
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
@@ -23,17 +22,16 @@ def train_disc(gan_model, opt, dataset_iter, iters=1):
     return str(total_loss.numpy())
 
 
-def train_gen(gan_model, opt, iters=1):
+def train_gen(gan_model, opt, iters=1, grad_clip_norm=3.0):
     # freeze weights
     gan_model.disc.trainable = False
 
     # discriminator weights are frozen - just being used as loss function
     for i in range(iters):
         # train_step
-        grad_clip_norm = 3.0
         with tf.GradientTape() as tape:
             pred = gan_model(None)
-            logging.info("gen_losses: " + str(gan_model.losses))
+            logging.debug("gen_losses: " + str(gan_model.losses))
             total_loss = tf.reduce_sum(gan_model.losses)
         grads = tape.gradient(total_loss, gan_model.trainable_variables)
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
@@ -48,6 +46,8 @@ def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
         "total_iters": 1,
         "gen_iters": 1,
         "disc_iters": 1,
+        "gen_grad_clip_norm": 3.0,
+        "disc_grad_clip_norm": 3.0,
         "loss_period": 2,
         "audio_period": 2,
         "weights_period": 2,
@@ -59,8 +59,15 @@ def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
     # main loop
     for i in range(len(losses_df), len(losses_df) + kwargs["total_iters"]):
         logging.info("----- GAN Step " + str(i) + " -----")
-        disc_loss = train_disc(gan_model,disc_opt,combined_iter,iters=kwargs["disc_iters"])
-        gen_loss = train_gen(gan_model,gen_opt,iters=kwargs["gen_iters"])
+        disc_loss = train_disc(gan_model,
+                               disc_opt,
+                               combined_iter,
+                               iters=kwargs["disc_iters"],
+                               grad_clip_norm=kwargs["disc_grad_clip_norm"])
+        gen_loss = train_gen(gan_model,
+                             gen_opt,
+                             iters=kwargs["gen_iters"],
+                             grad_clip_norm=kwargs["gen_grad_clip_norm"])
         logging.info("Disc loss: " + disc_loss + " Gen loss: " + gen_loss)
         if kwargs["model_dir"]:
             gan_checkpoint(gan_model, i, losses_df, gen_loss, disc_loss, kwargs)
@@ -80,12 +87,12 @@ def gan_checkpoint(gan_model, i, losses_df, gen_loss, disc_loss, kwargs):
 
     # export dataframe to csv every so often
     if (i % kwargs["loss_period"]) == 0 and i != 0:
-        # logging.info("Saving loss history to file..")
+        logging.debug("Saving loss history to file..")
         losses_df.to_csv(model_dir + "losses.csv",index=False)
 
     # save weights
     if (i % kwargs["weights_period"]) == 0 and i != 0:
-        logging.info("Saving weights to checkpoint..")
+        logging.debug("Saving weights to checkpoint..")
         gan_model.save_weights(model_dir + "weights/iter" + str(i) +".ckpt")
 
 def initialize_model_dir(gan_model, kwargs):

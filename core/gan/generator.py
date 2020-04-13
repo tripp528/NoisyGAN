@@ -64,7 +64,7 @@ class LatentGenerator(Layer):
         "z_latent_dim": 100,
 
         # f0
-        "f0_latent_dim": 8,
+        # "f0_latent_dim": 8,
         "f0_hidden_activation": 'tanh',
         "f0_t_scale": 0.5,
         "f0_z_scale": 0.1,
@@ -73,7 +73,7 @@ class LatentGenerator(Layer):
         "f0_n_hidden":3,
 
         # ld
-        "ld_latent_dim": 8,
+        # "ld_latent_dim": 8,
         "ld_hidden_activation": 'tanh',
         "ld_t_scale": 0.5,
         "ld_z_scale": 0.1,
