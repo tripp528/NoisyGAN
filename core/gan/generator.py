@@ -61,7 +61,7 @@ class LatentGenerator(Layer):
 
     DEFAULT_ARGS = {
         # z
-        "z_latent_dim": 100,
+        "latent_dim": 100,
 
         # f0
         # "f0_latent_dim": 8,
@@ -93,9 +93,7 @@ class LatentGenerator(Layer):
                                n_hidden=self.params["f0_n_hidden"],
                                t_scale=self.params["f0_t_scale"],
                                z_scale=self.params["f0_z_scale"],
-
-                               latent_dim=self.params["z_latent_dim"],
-
+                               latent_dim=self.params["latent_dim"],
                                activation=self.params["f0_hidden_activation"],
                                second_sig=self.params["ld_second_sig"])
 
@@ -103,17 +101,15 @@ class LatentGenerator(Layer):
                                n_hidden=self.params["ld_n_hidden"],
                                t_scale=self.params["ld_t_scale"],
                                z_scale=self.params["ld_z_scale"],
-
-                               latent_dim=self.params["z_latent_dim"],
-
+                               latent_dim=self.params["latent_dim"],
                                activation=self.params["ld_hidden_activation"],
                                second_sig=self.params["ld_second_sig"])
 
-        self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["z_latent_dim"])
+        self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["latent_dim"])
 
     def call(self,inputs):
         """Generates outputs with dictionary of f0_scaled and ld_scaled."""
-        latent = tf.random.normal((1,self.params["z_latent_dim"])) # (1, 100ish)
+        latent = tf.random.normal((1,self.params["latent_dim"])) # (1, 100ish)
         z = self.z_upsampler(latent) # (1, 8, 1000, 1)
         z = tf.squeeze(z,axis=0)# (8, 1000, 1)
 

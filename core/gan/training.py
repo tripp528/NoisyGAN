@@ -40,14 +40,19 @@ def train_gen(gan_model, opt, iters=1, grad_clip_norm=3.0):
     # logging.info("Gen Loss: " + str(total_loss.numpy()))
     return str(total_loss.numpy())
 
-def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
+def train_gan(gan_model, combined_iter, **kwargs):
     DEFAULT_ARGS = {
         "model_dir": None,
         "total_iters": 1,
+        # gen
         "gen_iters": 1,
-        "disc_iters": 1,
         "gen_grad_clip_norm": 3.0,
+        "gen_opt": tf.keras.optimizers.Adam(lr=0.001),
+        #disc
+        "disc_iters": 1,
         "disc_grad_clip_norm": 3.0,
+        "disc_opt": tf.keras.optimizers.Adam(lr=0.001),
+        # checkpoints
         "loss_period": 2,
         "audio_period": 2,
         "weights_period": 2,
@@ -60,12 +65,12 @@ def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
     for i in range(len(losses_df), len(losses_df) + kwargs["total_iters"]):
         logging.info("----- GAN Step " + str(i) + " -----")
         disc_loss = train_disc(gan_model,
-                               disc_opt,
+                               kwargs["disc_opt"],
                                combined_iter,
                                iters=kwargs["disc_iters"],
                                grad_clip_norm=kwargs["disc_grad_clip_norm"])
         gen_loss = train_gen(gan_model,
-                             gen_opt,
+                             kwargs["gen_opt"],
                              iters=kwargs["gen_iters"],
                              grad_clip_norm=kwargs["gen_grad_clip_norm"])
         logging.info("Disc loss: " + disc_loss + " Gen loss: " + gen_loss)
