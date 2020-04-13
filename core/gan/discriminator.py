@@ -3,18 +3,19 @@ from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
                                     Flatten,Dense,Reshape,Conv2DTranspose,InputLayer
 from tensorflow.keras.activations import sigmoid
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.losses import binary_crossentropy
+from tensorflow.keras.losses import binary_crossentropy, mean_squared_error
 
 from core.utils import *
 
 class Discriminator(Model):
-    """for now, just re-encode the fake sample.
-        in the future, just feed flz from fake right in
-        TODO: subclass ddsp Model
-    """
-    def __init__(self, batch_size=32):
+    DEFAULT_ARGS = {
+        'batch_size': 8,
+        'loss': binary_crossentropy,
+    }
+
+    def __init__(self, **kwargs):
         super().__init__(name='discriminator')
-        self.batch_size = batch_size
+        self.params = merge(self.DEFAULT_ARGS, kwargs)
         self.preprocessor = self.buildPreprocessor()
         self.flzEncoder = self.buildFLZEncoder()
         self.classifier = self.buildClassifier()
@@ -36,7 +37,7 @@ class Discriminator(Model):
         classification = self.classifier(encoded_concat)
 
         if add_losses:
-            self.add_loss(binary_crossentropy(sample['label'],classification))
+            self.add_loss(self.params["loss"](sample['label'],classification))
         return classification
 
     def buildPreprocessor(self):
@@ -52,7 +53,7 @@ class Discriminator(Model):
         #TODO
         # now encode even further down to a binary classification real or fake
         discriminator = Sequential()
-        discriminator.add(InputLayer(((1000,8,1)), batch_size=self.batch_size))
+        discriminator.add(InputLayer(((1000,8,1)), batch_size=self.params["batch_size"]))
         # downsample to 500x3
         discriminator.add(Conv2D(16, (3,3), strides=(2, 2), padding='same'))
         discriminator.add(BatchNormalization())
