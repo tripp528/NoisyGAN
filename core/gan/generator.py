@@ -85,24 +85,24 @@ class LatentGenerator(Layer):
     def __init__(self, name="LatentGenerator", **kwargs):
         super().__init__(name=name)
         self.params = merge(self.DEFAULT_ARGS, kwargs)
-        self.output_splits = (('f0_scaled', 1),('ld_scaled', 1),('z', 8))
+        self.output_splits = (('f0_scaled', 1),('ld_scaled', 1),('z', 6))
 
         #define layers
-        self.f0_cppn = CPPN_f0(n_nodes=self.params["f0_n_nodes"],
-                               n_hidden=self.params["f0_n_hidden"],
-                               t_scale=self.params["f0_t_scale"],
-                               z_scale=self.params["f0_z_scale"],
-                               latent_dim=self.params["f0_latent_dim"],
-                               activation=self.params["f0_hidden_activation"],
-                               second_sig=self.params["ld_second_sig"])
-
-        self.ld_cppn = CPPN_f0(n_nodes=self.params["ld_n_nodes"],
-                               n_hidden=self.params["ld_n_hidden"],
-                               t_scale=self.params["ld_t_scale"],
-                               z_scale=self.params["ld_z_scale"],
-                               latent_dim=self.params["ld_latent_dim"],
-                               activation=self.params["ld_hidden_activation"],
-                               second_sig=self.params["ld_second_sig"])
+        # self.f0_cppn = CPPN_f0(n_nodes=self.params["f0_n_nodes"],
+        #                        n_hidden=self.params["f0_n_hidden"],
+        #                        t_scale=self.params["f0_t_scale"],
+        #                        z_scale=self.params["f0_z_scale"],
+        #                        latent_dim=self.params["f0_latent_dim"],
+        #                        activation=self.params["f0_hidden_activation"],
+        #                        second_sig=self.params["ld_second_sig"])
+        #
+        # self.ld_cppn = CPPN_f0(n_nodes=self.params["ld_n_nodes"],
+        #                        n_hidden=self.params["ld_n_hidden"],
+        #                        t_scale=self.params["ld_t_scale"],
+        #                        z_scale=self.params["ld_z_scale"],
+        #                        latent_dim=self.params["ld_latent_dim"],
+        #                        activation=self.params["ld_hidden_activation"],
+        #                        second_sig=self.params["ld_second_sig"])
 
         self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["z_latent_dim"])
 
@@ -112,12 +112,12 @@ class LatentGenerator(Layer):
         z = self.z_upsampler(z) # (1, 8, 1000, 1)
         z = tf.squeeze(z,axis=0)# (8, 1000, 1)
 
-        f0 = self.f0_cppn(None)
-        ld = self.ld_cppn(None)
-        # f0 = tf.ones((1,1000,1)) * .4
-        # ld = tf.ones((1,1000,1)) * 0.1
+        # f0 = self.f0_cppn(None)
+        # ld = self.ld_cppn(None)
+        # flz = tf.concat((f0,ld,z), axis=0)
 
-        flz = tf.concat((f0,ld,z), axis=0)
+        flz = z # (1, 1000, 8)
+
         flz = tf.transpose(flz)# (1, 1000, 10)
 
         # convert to dictionary
@@ -141,13 +141,11 @@ class LatentGenerator(Layer):
         generator.add(Conv2DTranspose(16, (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
-        generator.add(Conv2D(1, (3,3), activation='sigmoid', padding='same'))
         # upsample to 8 x 1000
         generator.add(Conv2DTranspose(16, (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         generator.add(Conv2D(1, (3,3), activation='sigmoid', padding='same'))
-
         return generator
 
 class UnPreprocessor(ddsp.training.preprocessing.Preprocessor):
