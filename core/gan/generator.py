@@ -60,11 +60,9 @@ class CPPN_f0(Model):
 class LatentGenerator(Layer):
 
     DEFAULT_ARGS = {
-        # z
         "latent_dim": 100,
 
         # f0
-        # "f0_latent_dim": 8,
         "f0_hidden_activation": 'tanh',
         "f0_t_scale": 0.5,
         "f0_z_scale": 0.1,
@@ -73,13 +71,15 @@ class LatentGenerator(Layer):
         "f0_n_hidden":3,
 
         # ld
-        # "ld_latent_dim": 8,
         "ld_hidden_activation": 'tanh',
         "ld_t_scale": 0.5,
         "ld_z_scale": 0.1,
         "ld_second_sig": True,
         "ld_n_nodes":3,
         "ld_n_hidden":1,
+
+        # z
+        "num_z_filters": 16,
 
     }
     # TODO: only does one at a time
@@ -126,21 +126,21 @@ class LatentGenerator(Layer):
         # define the generator model
         generator = Sequential()
         # foundation for 1 x 125 signal
-        n_nodes = 125 * 1 * 16
+        n_nodes = 125 * 1 * self.params["num_z_filters"]
         generator.add(Dense(n_nodes, input_dim=latent_dim, dtype='float32'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
-        generator.add(Reshape((1, 125, 16)))
+        generator.add(Reshape((1, 125, self.params["num_z_filters"])))
         # upsample to 2 x 250
-        generator.add(Conv2DTranspose(16, (3,3), strides=(2,2), padding='same'))
+        generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         # upsample to 4 x 500
-        generator.add(Conv2DTranspose(16, (3,3), strides=(2,2), padding='same'))
+        generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         # upsample to 8 x 1000
-        generator.add(Conv2DTranspose(16, (3,3), strides=(2,2), padding='same'))
+        generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         generator.add(Conv2D(1, (3,3), activation='sigmoid', padding='same'))
