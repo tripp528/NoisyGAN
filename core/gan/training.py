@@ -79,7 +79,7 @@ def gan_checkpoint(gan_model, i, losses_df, gen_loss, disc_loss, kwargs):
 
     # export dataframe to csv every so often
     if (i % kwargs["loss_period"]) == 0 and i != 0:
-        logging.info("Saving loss history to file..")
+        # logging.info("Saving loss history to file..")
         losses_df.to_csv(model_dir + "losses.csv",index=False)
 
     # save weights

@@ -19,6 +19,6 @@ class GAN(Model):
 
     def call(self, inputs=None):
         generated = self.gen.generate_batch(label=1,batch_size=self.params["batch_size"])
-        classification = self.disc(generated, add_losses=True)
-        # self.add_loss(binary_crossentropy(generated["label"], classification))
+        classification = self.disc(generated, add_losses=False)
+        self.add_loss(binary_crossentropy(generated["label"], classification))
         return classification
