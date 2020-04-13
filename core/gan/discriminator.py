@@ -33,8 +33,10 @@ class Discriminator(Model):
         encoded_concat = tf.expand_dims(encoded_concat,axis=3)
 
         # classify if it's real or not
-        classification = self.classifier(encoded_concat, training=training)
-        self.add_loss(binary_crossentropy(sample['label'],classification))
+        classification = self.classifier(encoded_concat)
+
+        if training:
+            self.add_loss(binary_crossentropy(sample['label'],classification))
         return classification
 
     def buildPreprocessor(self):
@@ -46,7 +48,7 @@ class Discriminator(Model):
                                                                        z_time_steps=1000)
         return encoder
 
-    def buildClassifier(self,training=True):
+    def buildClassifier(self):
         #TODO
         # now encode even further down to a binary classification real or fake
         discriminator = Sequential()

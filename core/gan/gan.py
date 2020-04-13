@@ -17,11 +17,8 @@ class GAN(Model):
         self.gen = Generator(**self.params)
         self.disc = Discriminator(batch_size=self.params["batch_size"])
 
-    def call(self, inputs): #inputs are NONE
-        # label and training param don't matter here - we add our own label and loss
-        generated = self.gen.generate_batch(batch_size=self.params["batch_size"])
-        classification = self.disc(generated)
-        label = tf.convert_to_tensor([1]) #trying to trick the frozen discriminator
-        self.add_loss(binary_crossentropy(label, classification))
-
+    def call(self, inputs=None): #inputs are NONE
+        generated = self.gen.generate_batch(label=1,batch_size=self.params["batch_size"])
+        classification = self.disc(generated,training=False)
+        self.add_loss(binary_crossentropy(generated["label"], classification))
         return classification

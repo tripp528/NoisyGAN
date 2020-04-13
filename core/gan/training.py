@@ -3,25 +3,26 @@ from core.utils import *
 from scipy.io import wavfile
 import pandas as pd
 
-def train_discriminator(disc, opt, dataset_iter, iters=1):
+def train_disc(gan_model, opt, dataset_iter, iters=1):
     # unfreeze weights
-    disc.trainable = True
+    gan_model.disc.trainable = True
 
     for i in range(iters): #TODO: shuffle batch around!
         batch = dataset_iter.getNext()
         # train_step
         grad_clip_norm = 3.0
         with tf.GradientTape() as tape:
-            pred = disc(batch,training=True)
-            total_loss = tf.reduce_sum(disc.losses)
-        grads = tape.gradient(total_loss, disc.trainable_variables)
+            pred = gan_model.disc(batch,training=True)
+            total_loss = tf.reduce_sum(gan_model.disc.losses)
+        grads = tape.gradient(total_loss, gan_model.disc.trainable_variables)
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
-        opt.apply_gradients(zip(grads, disc.trainable_variables))
+        opt.apply_gradients(zip(grads, gan_model.disc.trainable_variables))
 
-        # logging.info("Disc Loss: " + str(total_loss.numpy()))
+    # logging.info("Disc Loss: " + str(total_loss.numpy()))
+    return str(total_loss.numpy())
 
 
-def train_generator(gan_model, opt, iters=1):
+def train_gen(gan_model, opt, iters=1):
     # freeze weights
     gan_model.disc.trainable = False
 
@@ -37,7 +38,8 @@ def train_generator(gan_model, opt, iters=1):
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
         opt.apply_gradients(zip(grads, gan_model.trainable_variables))
 
-        # logging.info("Gen Loss: " + str(total_loss.numpy()))
+    # logging.info("Gen Loss: " + str(total_loss.numpy()))
+    return str(total_loss.numpy())
 
 def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
     DEFAULT_ARGS = {
@@ -79,16 +81,14 @@ def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
     # main loop
     for i in range(len(losses_df), len(losses_df) + kwargs["total_iters"]):
         logging.info("----- GAN Step " + str(i) + " -----")
-        train_discriminator(gan_model.disc, disc_opt, combined_iter, iters=kwargs["disc_iters"])
-        train_generator(gan_model,gen_opt,iters=kwargs["gen_iters"])
+        disc_loss = train_disc(gan_model,disc_opt,combined_iter,iters=kwargs["disc_iters"])
+        gen_loss = train_gen(gan_model,gen_opt,iters=kwargs["gen_iters"])
         if model_dir:
-            gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs)
+            gan_checkpoint(model_dir, gan_model, i, losses_df, gen_loss, disc_loss, kwargs)
 
-def gan_checkpoint(model_dir, gan_model, i, losses_df, kwargs):
+def gan_checkpoint(model_dir, gan_model, i, losses_df, gen_loss, disc_loss, kwargs):
 
     # always append losses to dataframe
-    disc_loss = str(tf.reduce_sum(gan_model.disc.losses).numpy())
-    gen_loss = str(tf.reduce_sum(gan_model.losses).numpy())
     logging.info("Disc loss: " + disc_loss + "Gen loss: " + gen_loss)
     losses_df.loc[i] = {"disc":disc_loss, "gen":gen_loss}
 
