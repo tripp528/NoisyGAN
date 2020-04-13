@@ -19,7 +19,7 @@ class Discriminator(Model):
         self.flzEncoder = self.buildFLZEncoder()
         self.classifier = self.buildClassifier()
 
-    def call(self, sample, training=True):
+    def call(self, sample, add_losses=True):
         # audio key must have shape (1,64000)
         preprocessed = self.preprocessor(sample)
 
@@ -35,7 +35,7 @@ class Discriminator(Model):
         # classify if it's real or not
         classification = self.classifier(encoded_concat)
 
-        if training:
+        if add_losses:
             self.add_loss(binary_crossentropy(sample['label'],classification))
         return classification
 

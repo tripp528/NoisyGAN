@@ -154,8 +154,8 @@ class UnPreprocessor(ddsp.training.preprocessing.Preprocessor):
         super().__init__()
         self.time_steps = time_steps
 
-    def __call__(self, features, training=True):
-        super().__call__(features, training)
+    def __call__(self, features):
+        super().__call__(features)
         return self._un_processing(features)
 
     def _un_processing(self, features):

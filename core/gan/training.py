@@ -12,7 +12,7 @@ def train_disc(gan_model, opt, dataset_iter, iters=1):
         # train_step
         grad_clip_norm = 3.0
         with tf.GradientTape() as tape:
-            pred = gan_model.disc(batch,training=True)
+            pred = gan_model.disc(batch,add_losses=True)
             total_loss = tf.reduce_sum(gan_model.disc.losses)
         grads = tape.gradient(total_loss, gan_model.disc.trainable_variables)
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
@@ -32,9 +32,7 @@ def train_gen(gan_model, opt, iters=1):
         grad_clip_norm = 3.0
         with tf.GradientTape() as tape:
             pred = gan_model(None)
-
             # logging.info(type(gan_model.losses))
-
             total_loss = tf.reduce_sum(gan_model.losses)
         grads = tape.gradient(total_loss, gan_model.trainable_variables)
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
@@ -62,6 +60,7 @@ def train_gan(gan_model, gen_opt, disc_opt, combined_iter, **kwargs):
         logging.info("----- GAN Step " + str(i) + " -----")
         disc_loss = train_disc(gan_model,disc_opt,combined_iter,iters=kwargs["disc_iters"])
         gen_loss = train_gen(gan_model,gen_opt,iters=kwargs["gen_iters"])
+        logging.info("Disc loss: " + disc_loss + " Gen loss: " + gen_loss)
         if kwargs["model_dir"]:
             gan_checkpoint(gan_model, i, losses_df, gen_loss, disc_loss, kwargs)
 
@@ -69,7 +68,6 @@ def gan_checkpoint(gan_model, i, losses_df, gen_loss, disc_loss, kwargs):
     model_dir = kwargs["model_dir"]
 
     # always append losses to dataframe
-    logging.info("Disc loss: " + disc_loss + " Gen loss: " + gen_loss)
     losses_df.loc[i] = {"disc":disc_loss, "gen":gen_loss}
 
     # save audio
