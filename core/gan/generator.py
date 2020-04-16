@@ -133,16 +133,28 @@ class LatentGenerator(Layer):
         generator.add(Reshape((1, 125, self.params["num_z_filters"])))
         # upsample to 2 x 250
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
+        generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         # upsample to 4 x 500
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
         # upsample to 8 x 1000
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        # convolve down to 1 filter
         generator.add(Conv2D(1, (3,3), activation='sigmoid', padding='same'))
         return generator
 
