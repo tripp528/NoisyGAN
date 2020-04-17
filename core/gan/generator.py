@@ -1,7 +1,8 @@
 from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
                                     Flatten,Dense,Reshape,Conv2DTranspose,\
-                                    Input, Activation, BatchNormalization, Layer
+                                    Input, Activation, BatchNormalization, Layer,\
+                                    Dropout
 
 from core.utils import *
 from ddsp.core import midi_to_hz
@@ -80,6 +81,8 @@ class LatentGenerator(Layer):
 
         # z
         "num_z_filters": 16,
+        "dropout": False,
+        "drop_rate": 0.5,
 
     }
     # TODO: only does one at a time
@@ -105,7 +108,9 @@ class LatentGenerator(Layer):
                                activation=self.params["ld_hidden_activation"],
                                second_sig=self.params["ld_second_sig"])
 
-        self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["latent_dim"])
+        self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["latent_dim"],
+                                                  dropout=self.params["dropout"],
+                                                  drop_rate=self.params["drop_rate"],)
 
     def call(self,inputs):
         """Generates outputs with dictionary of f0_scaled and ld_scaled."""
@@ -136,7 +141,7 @@ class LatentGenerator(Layer):
         outputs = ddsp.training.nn.split_to_dict(flz, self.output_splits)
         return outputs
 
-    def build_z_upsampler(self, latent_dim):
+    def build_z_upsampler(self, latent_dim, dropout=False, drop_rate=0.5):
         # define the generator model
         generator = Sequential()
         # foundation for 1 x 125 signal
@@ -152,10 +157,12 @@ class LatentGenerator(Layer):
         generator.add(Conv2D(self.params["num_z_filters"], (2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # convolution
         generator.add(Conv2D(self.params["num_z_filters"], (2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # upsample to 4 x 500
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
@@ -164,14 +171,17 @@ class LatentGenerator(Layer):
         generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # convolution
         generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # convolution
         generator.add(Conv2D(self.params["num_z_filters"], (3,3), dilation_rate=2, padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # upsample to 8 x 1000
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
@@ -180,10 +190,12 @@ class LatentGenerator(Layer):
         generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # convolution
         generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # convolution
         generator.add(Conv2D(self.params["num_z_filters"], (3,3), dilation_rate=2, padding='same'))
         generator.add(BatchNormalization())
