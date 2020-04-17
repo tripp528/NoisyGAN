@@ -14,7 +14,6 @@ def train_disc(gan_model, opt, dataset_iter, iters=1, grad_clip_norm=3.0, add_no
             shape = batch['label'].numpy().shape
             noise_vec = (np.random.random_sample(shape) - 0.5) * 0.05
             batch['label'] = batch['label'] + noise_vec
-            print(batch['label'])
 
         # train_step
         with tf.GradientTape() as tape:
