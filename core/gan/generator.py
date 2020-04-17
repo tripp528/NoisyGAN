@@ -138,6 +138,10 @@ class LatentGenerator(Layer):
         generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
         # upsample to 4 x 500
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
@@ -146,8 +150,16 @@ class LatentGenerator(Layer):
         generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
         # upsample to 8 x 1000
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         # convolution
