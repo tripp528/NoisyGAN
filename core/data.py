@@ -56,7 +56,7 @@ class FromNSynth(ddsp.training.data.TfdsProvider):
 # ------------------- iterator functions for GAN -------------------
 
 class CombinedIter():
-    def __init__(self, gen, data_provider, batch_size=8, overfit=False, noisy_label=True):
+    def __init__(self, gen, data_provider, batch_size=8, overfit=False):
         self.half_batch = int(batch_size/2)
         self.shapes = {"f0_hz": (1000,),
                   "loudness_db": (1000,),
