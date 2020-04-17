@@ -122,6 +122,20 @@ class LatentGenerator(Layer):
         outputs = ddsp.training.nn.split_to_dict(flz, self.output_splits)
         return outputs
 
+    def gen_from_latent(self, inputs, latent):
+        """Generates outputs with dictionary of f0_scaled and ld_scaled from vec of size (1, latent_dim)."""
+        z = self.z_upsampler(latent) # (1, 8, 1000, 1)
+        z = tf.squeeze(z,axis=0)# (8, 1000, 1)
+
+        f0 = self.f0_cppn(latent)# (1, 1000, 1)
+        ld = self.ld_cppn(latent)# (1, 1000, 1)
+        flz = tf.concat((f0,ld,z), axis=0)# (10, 1000, 1)
+
+        # convert to dictionary
+        flz = tf.transpose(flz) # (1, 1000, 10)
+        outputs = ddsp.training.nn.split_to_dict(flz, self.output_splits)
+        return outputs
+
     def build_z_upsampler(self, latent_dim):
         # define the generator model
         generator = Sequential()
@@ -135,11 +149,11 @@ class LatentGenerator(Layer):
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(LeakyReLU(alpha=0.2))
         # convolution
-        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(Conv2D(self.params["num_z_filters"], (2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         # convolution
-        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(Conv2D(self.params["num_z_filters"], (2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         # upsample to 4 x 500
@@ -224,6 +238,15 @@ class Generator(Layer):
             squeezedSample[key] = tf.squeeze(sample[key])
         squeezedSample["label"] = tf.convert_to_tensor([float(label)])
         return squeezedSample
+
+    def gen_from_latent(self, latent):
+        ''' Generates audio from given latent vector '''
+        upsampled = self.latent_generator.gen_from_latent(None, latent)
+        un_processed = self.unprocessor(upsampled)
+        decoded = self.decoder(un_processed)
+        sample = decoded
+        sample['audio'] = self.processor_group(decoded)
+        return sample
 
     def generate_batch(self, label=0, batch_size=8):
         """
