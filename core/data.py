@@ -1,5 +1,6 @@
 # local imports
 from .utils import *
+import random
 
 class FromTFRecords(ddsp.training.data.TFRecordProvider):
     """ class for getting dataset from tfrecords (for GAN) """
@@ -27,19 +28,26 @@ class FromNSynth(ddsp.training.data.TfdsProvider):
   def __init__(self,
                name='nsynth/gansynth_subset.f0_and_loudness:2.3.0',
                split='train',
-               data_dir='gs://tfds-data/datasets'):
+               data_dir='gs://tfds-data/datasets',
+               lower_label=True):
     if data_dir == 'gs://tfds-data/datasets':
       logging.warning('If not on colab, this is very slow. Use data_dir param.')
     super().__init__(name, split, data_dir)
+    self.lower_label=lower_label
 
   def get_dataset(self, shuffle=True):
     """Returns dataset with slight restructuring of feature dictionary."""
     def preprocess_ex(ex):
+        if self.lower_label:
+            lab = 0.9
+        else:
+            lab = 1.0
+
         return {
             'audio': ex['audio'],
             'f0_hz': ex['f0']['hz'],
             'loudness_db': ex['loudness']['db'],
-            'label': tf.convert_to_tensor([1.0]),
+            'label': tf.convert_to_tensor([lab]),
         }
     dataset = super().get_dataset(shuffle)
     dataset = dataset.map(preprocess_ex, num_parallel_calls=ddsp.training.data._AUTOTUNE)
@@ -48,7 +56,7 @@ class FromNSynth(ddsp.training.data.TfdsProvider):
 # ------------------- iterator functions for GAN -------------------
 
 class CombinedIter():
-    def __init__(self, gen, data_provider, batch_size=8, overfit=False):
+    def __init__(self, gen, data_provider, batch_size=8, overfit=False, noisy_label=True):
         self.half_batch = int(batch_size/2)
         self.shapes = {"f0_hz": (1000,),
                   "loudness_db": (1000,),
@@ -58,6 +66,10 @@ class CombinedIter():
             self.dataset = data_provider.get_batch(self.half_batch, shuffle=False).take(self.half_batch).repeat()
         else:
             self.dataset = data_provider.get_batch(self.half_batch, shuffle=True)
+
+        #if noisy_label:
+
+
         self.gen = gen
 
     def getNext(self):
