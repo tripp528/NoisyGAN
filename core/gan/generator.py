@@ -243,7 +243,7 @@ class Generator(Layer):
         self.params = merge(self.DEFAULT_ARGS, kwargs)
         if self.params["main_synth"] == "additive":
             self.tambre_vec_name = "harmonic_distribution"
-        else if self.params["main_synth"] == "wavetable":
+        elif self.params["main_synth"] == "wavetable":
             self.tambre_vec_name = "wavetables"
 
         self.latent_generator = LatentGenerator(**kwargs)
