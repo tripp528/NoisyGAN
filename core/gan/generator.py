@@ -228,8 +228,23 @@ class UnPreprocessor(ddsp.training.preprocessing.Preprocessor):
 
 class Generator(Layer):
 
+    DEFAULT_ARGS = {
+        # Decoder
+        "rnn_type":"gru",
+
+        # Processor Group ### Still needs to be implemented
+        "main_synth":"additive",
+
+    }
+
     def __init__(self,name='generator',**kwargs):
         super().__init__(name=name)
+
+        self.params = merge(self.DEFAULT_ARGS, kwargs)
+        if self.params["main_synth"] == "additive":
+            self.tambre_vec_name = "harmonic_distribution"
+        else if self.params["main_synth"] == "wavetable":
+            self.tambre_vec_name = "wavetables"
 
         self.latent_generator = LatentGenerator(**kwargs)
         self.unprocessor = UnPreprocessor(time_steps=1000)
@@ -290,11 +305,11 @@ class Generator(Layer):
         # rnn decoder .. TODO: figure out what this is!!
         decoder = ddsp.training.decoders.ZRnnFcDecoder(
             rnn_channels = 256,
-            rnn_type = 'gru',
+            rnn_type = self.params["rnn_type"],
             ch = 256,
             layers_per_stack = 1,
             output_splits = (('amps', 1),
-                             ('harmonic_distribution', 45),
+                             (self.tambre_vec_name, 45),
                              ('noise_magnitudes', 45)))
         return decoder
 
@@ -302,9 +317,16 @@ class Generator(Layer):
         """
             Create actual synth structure (highly customizable)
         """
-        additive = ddsp.synths.Additive(n_samples=DEFAULT_N_SAMPLES,
-                                        sample_rate=DEFAULT_SAMPLE_RATE, # this is defined in my_ddsp_utils
-                                        name='additive')
+        if self.params['main_synth'] == "additive":
+            main = ddsp.synths.Additive(n_samples=DEFAULT_N_SAMPLES,
+                                            sample_rate=DEFAULT_SAMPLE_RATE, # this is defined in my_ddsp_utils
+                                            name='main')
+
+        if self.params['main_synth'] == "wavetable":
+            main = ddsp.synths.Wavetable(n_samples=DEFAULT_N_SAMPLES,
+                                            sample_rate=DEFAULT_SAMPLE_RATE, # this is defined in my_ddsp_utils
+                                            name='main')
+
         noise = ddsp.synths.FilteredNoise(window_size=0,
                                           initial_bias=-10.0,
                                           name='noise')
@@ -312,9 +334,9 @@ class Generator(Layer):
         reverb = ddsp.effects.Reverb(name='reverb', trainable=True)
 
         # package them together
-        dag = [(additive, ['amps', 'harmonic_distribution', 'f0_hz']),
+        dag = [(main, ['amps', self.tambre_vec_name, 'f0_hz']),
                (noise, ['noise_magnitudes']),
-               (add, ['noise/signal', 'additive/signal']),
+               (add, ['noise/signal', 'main/signal']),
                (reverb, ['add/signal'])]
         processor_group = ddsp.processors.ProcessorGroup(dag=dag,
                                                          name='processor_group')
