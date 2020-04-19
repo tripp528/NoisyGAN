@@ -52,6 +52,7 @@ class Discriminator(Model):
     def buildClassifier(self):
         #TODO
         # now encode even further down to a binary classification real or fake
+        ''' Trip's Discriminator
         discriminator = Sequential()
         discriminator.add(InputLayer(((1000,8,1)), batch_size=self.params["batch_size"]))
         # downsample to 500x3
@@ -68,6 +69,34 @@ class Discriminator(Model):
         discriminator.add(LeakyReLU(alpha=0.2))
         # classify
         discriminator.add(Flatten())
+        discriminator.add(Dense(1, activation='sigmoid'))
+        '''
+
+        #''' New Discriminator
+        discriminator = Sequential()
+        discriminator.add(InputLayer(((1000,8,1)), batch_size=self.params["batch_size"]))
+                # downsample to 500x3
+        discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
+        discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
+        discriminator.add(Conv2D(16, (1,1), padding='same', activation='relu'))
+        discriminator.add(BatchNormalization())
+        discriminator.add(MaxPooling2D(pool_size=(2, 2)))
+
+                # downsample to 250 x 2
+        discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
+        discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
+        discriminator.add(Conv2D(16, (1,1), padding='same', activation='relu'))
+        discriminator.add(BatchNormalization())
+        discriminator.add(MaxPooling2D(pool_size=(2, 2)))
+                # downsample to 125 x 1
+        discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
+        discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
+        discriminator.add(Conv2D(8, (1,1), padding='same', activation='relu'))
+        discriminator.add(BatchNormalization())
+        discriminator.add(MaxPooling2D(pool_size=(2, 2)))
+                # classify
+        discriminator.add(Flatten())
+        discriminator.add(Dense(100, activation='relu'))
         discriminator.add(Dense(1, activation='sigmoid'))
 #         discriminator.summary()
 
