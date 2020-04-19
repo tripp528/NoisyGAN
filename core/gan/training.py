@@ -39,7 +39,7 @@ def train_gen(gan_model, opt, iters=1, grad_clip_norm=3.0):
             pred = gan_model(None)
             logging.debug("gen_losses: " + str(gan_model.losses))
             total_loss = tf.reduce_sum(gan_model.losses)
-            total_loss = total_loss - (tf.reduce_std(pred['z'])*5000)
+            total_loss = total_loss - (tf.math.reduce_std(pred['z'])*5000)
 
         grads = tape.gradient(total_loss, gan_model.trainable_variables)
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
