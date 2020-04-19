@@ -1,5 +1,5 @@
 from tensorflow.keras import Sequential, Model
-from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
+from tensorflow.keras.layers import Conv2D,BatchNormalization,ReLU, LeakyReLU,\
                                     Flatten,Dense,Reshape,Conv2DTranspose,\
                                     Input, Activation, BatchNormalization, Layer,\
                                     Dropout
@@ -141,7 +141,7 @@ class LatentGenerator(Layer):
         outputs = ddsp.training.nn.split_to_dict(flz, self.output_splits)
         return outputs
 
-    def build_z_upsampler(self, latent_dim, dropout=False, drop_rate=0.5):
+    def build_z_upsampler(self, latent_dim, dropout=False, drop_rate=0.2):
         # define the generator model
         generator = Sequential()
         # foundation for 1 x 125 signal
@@ -154,12 +154,12 @@ class LatentGenerator(Layer):
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(LeakyReLU(alpha=0.2))
         # convolution
-        generator.add(Conv2D(self.params["num_z_filters"], (2,2), padding='same'))
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         if dropout: generator.add(Dropout(drop_rate))
         # convolution
-        generator.add(Conv2D(self.params["num_z_filters"], (2,2), padding='same'))
+        generator.add(Conv2D(self.params["num_z_filters"], (1,1), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         if dropout: generator.add(Dropout(drop_rate))
@@ -178,7 +178,7 @@ class LatentGenerator(Layer):
         generator.add(LeakyReLU(alpha=0.2))
         if dropout: generator.add(Dropout(drop_rate))
         # convolution
-        generator.add(Conv2D(self.params["num_z_filters"], (3,3), dilation_rate=2, padding='same'))
+        generator.add(Conv2D(self.params["num_z_filters"], (1,1), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         if dropout: generator.add(Dropout(drop_rate))
@@ -197,7 +197,7 @@ class LatentGenerator(Layer):
         generator.add(LeakyReLU(alpha=0.2))
         if dropout: generator.add(Dropout(drop_rate))
         # convolution
-        generator.add(Conv2D(self.params["num_z_filters"], (3,3), dilation_rate=2, padding='same'))
+        generator.add(Conv2D(self.params["num_z_filters"], (1,1), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
         # convolve down to 1 filter
