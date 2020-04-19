@@ -1,7 +1,8 @@
 from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
                                     Flatten,Dense,Reshape,Conv2DTranspose,\
-                                    Input, Activation, BatchNormalization, Layer
+                                    Input, Activation, BatchNormalization, Layer,\
+                                    Dropout
 
 from core.utils import *
 from ddsp.core import midi_to_hz
@@ -80,6 +81,8 @@ class LatentGenerator(Layer):
 
         # z
         "num_z_filters": 16,
+        "dropout": False,
+        "drop_rate": 0.5,
 
     }
     # TODO: only does one at a time
@@ -105,7 +108,9 @@ class LatentGenerator(Layer):
                                activation=self.params["ld_hidden_activation"],
                                second_sig=self.params["ld_second_sig"])
 
-        self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["latent_dim"])
+        self.z_upsampler = self.build_z_upsampler(latent_dim=self.params["latent_dim"],
+                                                  dropout=self.params["dropout"],
+                                                  drop_rate=self.params["drop_rate"],)
 
     def call(self,inputs):
         """Generates outputs with dictionary of f0_scaled and ld_scaled."""
@@ -122,7 +127,21 @@ class LatentGenerator(Layer):
         outputs = ddsp.training.nn.split_to_dict(flz, self.output_splits)
         return outputs
 
-    def build_z_upsampler(self, latent_dim):
+    def gen_from_latent(self, inputs, latent):
+        """Generates outputs with dictionary of f0_scaled and ld_scaled from vec of size (1, latent_dim)."""
+        z = self.z_upsampler(latent) # (1, 8, 1000, 1)
+        z = tf.squeeze(z,axis=0)# (8, 1000, 1)
+
+        f0 = self.f0_cppn(latent)# (1, 1000, 1)
+        ld = self.ld_cppn(latent)# (1, 1000, 1)
+        flz = tf.concat((f0,ld,z), axis=0)# (10, 1000, 1)
+
+        # convert to dictionary
+        flz = tf.transpose(flz) # (1, 1000, 10)
+        outputs = ddsp.training.nn.split_to_dict(flz, self.output_splits)
+        return outputs
+
+    def build_z_upsampler(self, latent_dim, dropout=False, drop_rate=0.5):
         # define the generator model
         generator = Sequential()
         # foundation for 1 x 125 signal
@@ -133,16 +152,55 @@ class LatentGenerator(Layer):
         generator.add(Reshape((1, 125, self.params["num_z_filters"])))
         # upsample to 2 x 250
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
+        generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (2,2), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # upsample to 4 x 500
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), dilation_rate=2, padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
         # upsample to 8 x 1000
         generator.add(Conv2DTranspose(self.params["num_z_filters"], (3,3), strides=(2,2), padding='same'))
         generator.add(BatchNormalization())
         generator.add(LeakyReLU(alpha=0.2))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        if dropout: generator.add(Dropout(drop_rate))
+        # convolution
+        generator.add(Conv2D(self.params["num_z_filters"], (3,3), dilation_rate=2, padding='same'))
+        generator.add(BatchNormalization())
+        generator.add(LeakyReLU(alpha=0.2))
+        # convolve down to 1 filter
         generator.add(Conv2D(1, (3,3), activation='sigmoid', padding='same'))
         return generator
 
@@ -170,8 +228,23 @@ class UnPreprocessor(ddsp.training.preprocessing.Preprocessor):
 
 class Generator(Layer):
 
+    DEFAULT_ARGS = {
+        # Decoder
+        "rnn_type":"gru",
+
+        # Processor Group ### Still needs to be implemented
+        "main_synth":"additive",
+
+    }
+
     def __init__(self,name='generator',**kwargs):
         super().__init__(name=name)
+
+        self.params = merge(self.DEFAULT_ARGS, kwargs)
+        if self.params["main_synth"] == "additive":
+            self.tambre_vec_name = "harmonic_distribution"
+        elif self.params["main_synth"] == "wavetable":
+            self.tambre_vec_name = "wavetables"
 
         self.latent_generator = LatentGenerator(**kwargs)
         self.unprocessor = UnPreprocessor(time_steps=1000)
@@ -201,6 +274,15 @@ class Generator(Layer):
         squeezedSample["label"] = tf.convert_to_tensor([float(label)])
         return squeezedSample
 
+    def gen_from_latent(self, latent):
+        ''' Generates audio from given latent vector '''
+        upsampled = self.latent_generator.gen_from_latent(None, latent)
+        un_processed = self.unprocessor(upsampled)
+        decoded = self.decoder(un_processed)
+        sample = decoded
+        sample['audio'] = self.processor_group(decoded)
+        return sample
+
     def generate_batch(self, label=0, batch_size=8):
         """
             "audio": (batch_size, 64000),
@@ -223,11 +305,11 @@ class Generator(Layer):
         # rnn decoder .. TODO: figure out what this is!!
         decoder = ddsp.training.decoders.ZRnnFcDecoder(
             rnn_channels = 256,
-            rnn_type = 'gru',
+            rnn_type = self.params["rnn_type"],
             ch = 256,
             layers_per_stack = 1,
             output_splits = (('amps', 1),
-                             ('harmonic_distribution', 45),
+                             (self.tambre_vec_name, 45),
                              ('noise_magnitudes', 45)))
         return decoder
 
@@ -235,9 +317,16 @@ class Generator(Layer):
         """
             Create actual synth structure (highly customizable)
         """
-        additive = ddsp.synths.Additive(n_samples=DEFAULT_N_SAMPLES,
-                                        sample_rate=DEFAULT_SAMPLE_RATE, # this is defined in my_ddsp_utils
-                                        name='additive')
+        if self.params['main_synth'] == "additive":
+            main = ddsp.synths.Additive(n_samples=DEFAULT_N_SAMPLES,
+                                            sample_rate=DEFAULT_SAMPLE_RATE, # this is defined in my_ddsp_utils
+                                            name='main')
+
+        if self.params['main_synth'] == "wavetable":
+            main = ddsp.synths.Wavetable(n_samples=DEFAULT_N_SAMPLES,
+                                            sample_rate=DEFAULT_SAMPLE_RATE, # this is defined in my_ddsp_utils
+                                            name='main')
+
         noise = ddsp.synths.FilteredNoise(window_size=0,
                                           initial_bias=-10.0,
                                           name='noise')
@@ -245,9 +334,9 @@ class Generator(Layer):
         reverb = ddsp.effects.Reverb(name='reverb', trainable=True)
 
         # package them together
-        dag = [(additive, ['amps', 'harmonic_distribution', 'f0_hz']),
+        dag = [(main, ['amps', self.tambre_vec_name, 'f0_hz']),
                (noise, ['noise_magnitudes']),
-               (add, ['noise/signal', 'additive/signal']),
+               (add, ['noise/signal', 'main/signal']),
                (reverb, ['add/signal'])]
         processor_group = ddsp.processors.ProcessorGroup(dag=dag,
                                                          name='processor_group')

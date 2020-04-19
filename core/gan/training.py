@@ -3,12 +3,18 @@ from core.utils import *
 from scipy.io import wavfile
 import pandas as pd
 
-def train_disc(gan_model, opt, dataset_iter, iters=1, grad_clip_norm=3.0):
+def train_disc(gan_model, opt, dataset_iter, iters=1, grad_clip_norm=3.0, add_noise=True):
     # unfreeze weights
     gan_model.disc.trainable = True
 
     for i in range(iters): #TODO: shuffle batch around!
         batch = dataset_iter.getNext()
+        # Add noise to labels
+        if add_noise:
+            shape = batch['label'].numpy().shape
+            noise_vec = (np.random.random_sample(shape) - 0.5) * 0.05
+            batch['label'] = batch['label'] + noise_vec
+
         # train_step
         with tf.GradientTape() as tape:
             pred = gan_model.disc(batch,add_losses=True)
@@ -52,6 +58,7 @@ def train_gan(gan_model, combined_iter, **kwargs):
         "disc_iters": 1,
         "disc_grad_clip_norm": 3.0,
         "disc_opt": tf.keras.optimizers.Adam(lr=0.001),
+        "noisy_labels": True,
         # checkpoints
         "loss_period": 2,
         "audio_period": 2,
@@ -69,7 +76,8 @@ def train_gan(gan_model, combined_iter, **kwargs):
                                kwargs["disc_opt"],
                                combined_iter,
                                iters=kwargs["disc_iters"],
-                               grad_clip_norm=kwargs["disc_grad_clip_norm"])
+                               grad_clip_norm=kwargs["disc_grad_clip_norm"],
+                               add_noise=kwargs["noisy_labels"])
         gen_loss = train_gen(gan_model,
                              kwargs["gen_opt"],
                              iters=kwargs["gen_iters"],
