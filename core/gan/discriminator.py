@@ -79,19 +79,19 @@ class Discriminator(Model):
         discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
         discriminator.add(Conv2D(16, (1,1), padding='same', activation='relu'))
         discriminator.add(BatchNormalization())
-        discriminator.add(MaxPool2D(pool_size=(2, 2)))
+        #discriminator.add(MaxPool2D(pool_size=(2, 2)))
         # downsample to 250 x 2
         discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
         discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
         discriminator.add(Conv2D(16, (1,1), padding='same', activation='relu'))
         discriminator.add(BatchNormalization())
-        discriminator.add(MaxPool2D(pool_size=(2, 2)))
+        #discriminator.add(MaxPool2D(pool_size=(2, 2)))
         # downsample to 125 x 1
         discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
         discriminator.add(Conv2D(32, (3,3), padding='same', activation='relu'))
         discriminator.add(Conv2D(8, (1,1), padding='same', activation='relu'))
         discriminator.add(BatchNormalization())
-        discriminator.add(MaxPool2D(pool_size=(2, 2)))
+        #discriminator.add(MaxPool2D(pool_size=(2, 2)))
         # classify
         discriminator.add(Flatten())
         discriminator.add(Dense(100, activation='relu'))
