@@ -20,7 +20,6 @@ def train_disc(gan_model, opt, dataset_iter, iters=1, grad_clip_norm=3.0, add_no
             pred = gan_model.disc(batch,add_losses=True)
             logging.debug("disc_losses: " + str(gan_model.disc.losses))
             total_loss = tf.reduce_sum(gan_model.disc.losses)
-            total_loss += 0.001
         grads = tape.gradient(total_loss, gan_model.disc.trainable_variables)
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
         opt.apply_gradients(zip(grads, gan_model.disc.trainable_variables))
@@ -40,7 +39,6 @@ def train_gen(gan_model, opt, iters=1, grad_clip_norm=3.0):
             pred = gan_model(None)
             logging.debug("gen_losses: " + str(gan_model.losses))
             total_loss = tf.reduce_sum(gan_model.losses)
-            total_loss += 0.001
 
         grads = tape.gradient(total_loss, gan_model.trainable_variables)
         grads, _ = tf.clip_by_global_norm(grads, grad_clip_norm)
@@ -68,6 +66,7 @@ def train_gan(gan_model, combined_iter, **kwargs):
         "save_audio":True,
         "weights_period": 2,
         "auto_load_weights":False,
+        "from_benchmark":True
     }
     kwargs = merge(DEFAULT_ARGS, kwargs)
     losses_df = initialize_model_dir(gan_model,kwargs)
@@ -97,7 +96,10 @@ def gan_checkpoint(gan_model, i, losses_df, gen_loss, disc_loss, kwargs):
 
     # save audio
     if (i % kwargs["audio_period"]) == 0 and i != 0:
-        sample = gan_model.gen.generate()['audio'].numpy()
+        if kwargs["from_benchmark"]:
+            sample = gan_model.gen.gen_from_benchmark()['audio'].numpy()
+        else:
+            sample = gan_model.gen.generate()['audio'].numpy()
         play(sample)
         if kwargs["save_audio"]:
             audio_path = model_dir + "samples/" + "chkpt-iter-" + str(i) + ".wav"

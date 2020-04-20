@@ -251,6 +251,8 @@ class Generator(Layer):
         self.decoder = self.buildDecoder()
         self.processor_group = self.buildProcessorGroup()
 
+        self.benchmark_vec = tf.random.normal((1,self.params["latent_dim"]))
+
     def call(self,inputs, label=0):
         generated = self.latent_generator(None) # no inputs. generating
         un_processed = self.unprocessor(generated)
@@ -277,6 +279,15 @@ class Generator(Layer):
     def gen_from_latent(self, latent):
         ''' Generates audio from given latent vector '''
         upsampled = self.latent_generator.gen_from_latent(None, latent)
+        un_processed = self.unprocessor(upsampled)
+        decoded = self.decoder(un_processed)
+        sample = decoded
+        sample['audio'] = self.processor_group(decoded)
+        return sample
+
+    def gen_from_benchmark(self):
+        ''' Generates audio from given latent vector '''
+        upsampled = self.latent_generator.gen_from_latent(None, self.benchmark_vec)
         un_processed = self.unprocessor(upsampled)
         decoded = self.decoder(un_processed)
         sample = decoded
