@@ -1,5 +1,6 @@
 from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import *
+from tensorflow.keras.layers import MaxPool2D, MaxPooling2D
 from tensorflow.keras.activations import sigmoid
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import binary_crossentropy, mean_squared_error
@@ -96,5 +97,4 @@ class Discriminator(Model):
         discriminator.add(Dense(100, activation='relu'))
         discriminator.add(Dense(1, activation='sigmoid'))
 #         discriminator.summary()
-
         return discriminator
