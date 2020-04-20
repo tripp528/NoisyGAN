@@ -29,11 +29,13 @@ class FromNSynth(ddsp.training.data.TfdsProvider):
                name='nsynth/gansynth_subset.f0_and_loudness:2.3.0',
                split='train',
                data_dir='gs://tfds-data/datasets',
-               lower_label=True):
+               lower_label=True,
+               download=False):
     if data_dir == 'gs://tfds-data/datasets':
       logging.warning('If not on colab, this is very slow. Use data_dir param.')
     super().__init__(name, split, data_dir)
     self.lower_label=lower_label
+    self.download=download
 
   def get_dataset(self, shuffle=True):
     """Returns dataset with slight restructuring of feature dictionary."""
@@ -49,7 +51,11 @@ class FromNSynth(ddsp.training.data.TfdsProvider):
             'loudness_db': ex['loudness']['db'],
             'label': tf.convert_to_tensor([lab]),
         }
-    dataset = super().get_dataset(shuffle)
+    dataset = tfds.load(self._name,
+                        data_dir=self._data_dir,
+                        split=self._split,
+                        shuffle_files=shuffle,
+                        download=self.download)
     dataset = dataset.map(preprocess_ex, num_parallel_calls=ddsp.training.data._AUTOTUNE)
     return dataset
 
