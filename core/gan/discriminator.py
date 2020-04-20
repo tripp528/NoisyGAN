@@ -1,6 +1,6 @@
 from tensorflow.keras import Sequential, Model
 from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
-                                    Flatten,Dense,Reshape,Conv2DTranspose,InputLayer,
+                                    Flatten,Dense,Reshape,Conv2DTranspose,InputLayer,\
                                     MaxPooling2D
 from tensorflow.keras.activations import sigmoid
 from tensorflow.keras.optimizers import Adam
