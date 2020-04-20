@@ -1,7 +1,5 @@
 from tensorflow.keras import Sequential, Model
-from tensorflow.keras.layers import Conv2D,BatchNormalization,LeakyReLU,\
-                                    Flatten,Dense,Reshape,Conv2DTranspose,InputLayer,\
-                                    MaxPooling2D
+from tensorflow.keras.layers import *
 from tensorflow.keras.activations import sigmoid
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.losses import binary_crossentropy, mean_squared_error
