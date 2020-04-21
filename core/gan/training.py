@@ -50,7 +50,8 @@ def train_gen(gan_model, opt, iters=1, grad_clip_norm=3.0):
 def train_gan(gan_model, combined_iter, **kwargs):
     DEFAULT_ARGS = {
         "model_dir": None,
-        "total_iters": 1,
+        "total_iters": 10,
+        "play_checkpints":False,
         # gen
         "gen_iters": 1,
         "gen_grad_clip_norm": 3.0,
@@ -100,10 +101,11 @@ def gan_checkpoint(gan_model, i, losses_df, gen_loss, disc_loss, kwargs):
             sample = gan_model.gen.gen_from_benchmark()['audio'].numpy()
         else:
             sample = gan_model.gen.generate()['audio'].numpy()
-        play(sample)
+        if kwargs['play_checkpoints']: play(sample)
         if kwargs["save_audio"]:
             audio_path = model_dir + "samples/" + "chkpt-iter-" + str(i) + ".wav"
             wavfile.write(audio_path, DEFAULT_SAMPLE_RATE, sample)
+            logging.info("Sample saved to " + audio_path)
 
     # export dataframe to csv every so often
     if (i % kwargs["loss_period"]) == 0 and i != 0:
