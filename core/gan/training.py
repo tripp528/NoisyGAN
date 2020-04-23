@@ -1,6 +1,7 @@
 from core.utils import *
 ### New Import
 from scipy.io import wavfile
+import soundfile
 import pandas as pd
 
 def train_disc(gan_model, opt, dataset_iter, iters=1, grad_clip_norm=3.0, add_noise=True):
@@ -51,7 +52,7 @@ def train_gan(gan_model, combined_iter, **kwargs):
     DEFAULT_ARGS = {
         "model_dir": None,
         "total_iters": 10,
-        "play_checkpints":False,
+        "play_checkpoints":False,
         # gen
         "gen_iters": 1,
         "gen_grad_clip_norm": 3.0,
@@ -104,7 +105,9 @@ def gan_checkpoint(gan_model, i, losses_df, gen_loss, disc_loss, kwargs):
         if kwargs['play_checkpoints']: play(sample)
         if kwargs["save_audio"]:
             audio_path = model_dir + "samples/" + "chkpt-iter-" + str(i) + ".wav"
-            wavfile.write(audio_path, DEFAULT_SAMPLE_RATE, sample)
+            outfile = soundfile.SoundFile(audio_path, 'w', DEFAULT_SAMPLE_RATE, 1)
+            outfile.write(sample.T)
+            outfile.close()
             logging.info("Sample saved to " + audio_path)
 
     # export dataframe to csv every so often
