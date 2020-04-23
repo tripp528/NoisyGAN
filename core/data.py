@@ -52,11 +52,7 @@ class FromNSynth(ddsp.training.data.TfdsProvider):
             'loudness_db': ex['loudness']['db'],
             'label': tf.convert_to_tensor([lab]),
         }
-    dataset = tfds.load(self._name,
-                        data_dir=self._data_dir,
-                        split=self._split,
-                        shuffle_files=shuffle,
-                        download=self.download)
+    dataset = super().get_dataset(shuffle)
     dataset = dataset.map(preprocess_ex, num_parallel_calls=ddsp.training.data._AUTOTUNE)
     return dataset
 
@@ -73,9 +69,6 @@ class CombinedIter():
             self.dataset = data_provider.get_batch(self.half_batch, shuffle=False).take(self.half_batch).repeat()
         else:
             self.dataset = data_provider.get_batch(self.half_batch, shuffle=True)
-
-        #if noisy_label:
-
 
         self.gen = gen
 
