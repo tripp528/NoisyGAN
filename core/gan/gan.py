@@ -28,6 +28,6 @@ class GAN(Model):
         self.add_loss(self.params["loss"](generated["label"], classification))
 
         if self.params["add_diversity_loss"]:
-            self.add_loss(compute_diversity(generated))
+            self.add_loss(compute_diversity(generated["audio"]))
 
         return classification
