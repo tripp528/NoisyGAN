@@ -4,10 +4,6 @@ from core.utils import *
 from .discriminator import Discriminator
 from .generator import Generator
 
-def compute_diversity(input_tensor):
-    std_accross_batch_per_step = tf.math.reduce_std(input_tensor, axis=0)
-    return tf.reduce_mean(std_accross_batch_per_step)
-
 class GAN(Model):
 
     DEFAULT_ARGS = {
@@ -28,6 +24,9 @@ class GAN(Model):
         self.add_loss(self.params["loss"](generated["label"], classification))
 
         if self.params["add_diversity_loss"]:
-            self.add_loss(compute_diversity(generated["audio"]))
+            std_accross_batch_per_step = tf.math.reduce_std(generated["audio"], axis=0)
+            diversity = tf.reduce_mean(std_accross_batch_per_step)
+            diversity = tf.repeat(diversity, repeats=self.params["batch_size"])
+            self.add_loss(diversity)
 
         return classification
