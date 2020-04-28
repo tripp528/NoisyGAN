@@ -13,6 +13,7 @@ class GAN(Model):
     DEFAULT_ARGS = {
         'batch_size': 8,
         'loss': tf.keras.losses.binary_crossentropy,
+        'add_diversity_loss': False,
     }
 
     def __init__(self, **kwargs):
@@ -25,7 +26,6 @@ class GAN(Model):
         generated = self.gen.generate_batch(label=1,batch_size=self.params["batch_size"])
         classification = self.disc(generated, add_losses=False)
         self.add_loss(self.params["loss"](generated["label"], classification))
-
 
         if self.params["add_diversity_loss"]:
             self.add_loss(compute_diversity(generated))
