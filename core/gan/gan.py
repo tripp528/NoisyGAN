@@ -4,6 +4,10 @@ from core.utils import *
 from .discriminator import Discriminator
 from .generator import Generator
 
+def compute_diversity(input_tensor):
+    std_accross_batch_per_step = tf.math.reduce_std(input_tensor, axis=0)
+    return tf.reduce_mean(std_accross_batch_per_step)
+
 class GAN(Model):
 
     DEFAULT_ARGS = {
@@ -21,4 +25,9 @@ class GAN(Model):
         generated = self.gen.generate_batch(label=1,batch_size=self.params["batch_size"])
         classification = self.disc(generated, add_losses=False)
         self.add_loss(self.params["loss"](generated["label"], classification))
+
+
+        if self.params["add_diversity_loss"]:
+            self.add_loss(compute_diversity(generated))
+
         return classification
